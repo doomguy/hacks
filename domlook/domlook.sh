@@ -6,7 +6,7 @@ IFS=$'\n\t'
 # Uncomment for Debugging
 #set -x
 
-# Usage
+# Usage:
 # $ echo "example.com" | ./domlook.sh
 # example.com/93.184.216.34/2606:2800:220:1:248:1893:25c8:1946
 # $ cat domains.lst | ./domlook.sh
