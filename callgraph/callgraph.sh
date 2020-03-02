@@ -54,7 +54,7 @@ while IFS= read -r domain; do
   lookup
 
   # ip4 https
-  LURL="http://$IP4"
+  LURL="https://$IP4"
   lookup
 
 #  IP6=$(dig @8.8.8.8 AAAA +short www.microsoft.com | tail -n1)
@@ -64,7 +64,7 @@ while IFS= read -r domain; do
 #  lookup
 #
 #  # ip6 https
-#  LURL="http://$IP6"
+#  LURL="https://$IP6"
 #  lookup
 
 done
