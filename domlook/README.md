@@ -1,6 +1,7 @@
-Script to query multiple domains and output in grepable format:
+# domlook.sh
+Script to query multiple domains and output in grepable format.
 
-### Usage
+## Usage
 ```
 $ echo "example.com" | ./domlook.sh
 example.com/93.184.216.34/2606:2800:220:1:248:1893:25c8:1946
