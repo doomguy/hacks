@@ -32,3 +32,5 @@ node [shape=box];
 # Create graph with graphviz
 cat domains.lst | ./callgraph.sh | dot -Tpng -o graph.png
 ```
+
+![Callgraph](graph.png)
