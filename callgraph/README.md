@@ -1,6 +1,8 @@
 # callgraph.sh
 Create graphviz file from domain redirects.
 
+## Usage
+
 ```
 $ cat domains.lst | ./callgraph.sh 
 digraph G {
