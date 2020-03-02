@@ -9,6 +9,8 @@ IFS=$'\n\t'
 # Create graphviz file for requests path
 # Usage: cat domains.lst | ./callgraph | dot -Tpng -o graph.png
 
+# 2DO: Catch redirect loops
+
 if [ "${USER_AGENT:-}" ]; then
   UA="$USER_AGENT"
 else
