@@ -1,24 +1,26 @@
 #!/bin/bash
 # Remeber to use: https://www.shellcheck.net
-#set -euo pipefail
+set -euo pipefail
 IFS=$'\n\t'
 
 # Uncomment for Debugging
 #set -x
 
-# Create graphviz file from domain redirects.
-# Example: cat domains.lst | ./callgraph | dot -Tpng -o graph.png
+# Create graphviz file for requests path
+# Usage: cat domains.lst | ./callgraph | dot -Tpng -o graph.png
 
-# 2DO: Reenable 'set -euo' pipefail
-
-if [ "$USER_AGENT" ]; then
-  UA="-A $USER_AGENT"
+if [ "${USER_AGENT:-}" ]; then
+  UA="$USER_AGENT"
+else
+  UA="callgraph"
 fi
 
 lookup() {
   while [ "$LURL" ]; do
-    REDIR=$(curl -ski "$UA" --max-time 10 "$LURL" | grep -i ^Location: | sed 's/^Location: //gi' | sed 's/\r$//')
- 
+    set +o pipefail
+    REDIR=$(curl -ski -A "$UA" --max-time 10 "$LURL" | grep -i ^Location: | sed 's/^Location: //gi' | sed 's/\r$//')
+    set -o pipefail
+
     # fix missing domain
     if [ "$REDIR" ] && [[ "$REDIR" =~ ^/.* ]]; then
       REDIR="${LURL}${REDIR}"
