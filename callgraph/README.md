@@ -31,6 +31,12 @@ node [shape=box];
 ```
 
 ```
+$ assetfinder microsoft.com | grep microsoft.com | ./callgraph.sh > graph.gv
+$ dot -Tpng graph.gv -o graph.png
+
+```
+
+```
 # Create graph with graphviz
 cat domains.lst | ./callgraph.sh | dot -Tpng -o graph.png
 ```
