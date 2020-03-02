@@ -31,6 +31,7 @@ node [shape=box];
 ```
 
 ```
+# Combine with other tools like assetfinder
 $ assetfinder microsoft.com | grep microsoft.com | ./callgraph.sh > graph.gv
 $ dot -Tpng graph.gv -o graph.png
 
