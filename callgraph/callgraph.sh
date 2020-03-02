@@ -6,7 +6,7 @@ IFS=$'\n\t'
 # Uncomment for Debugging
 #set -x
 
-# Create graphviz file for requests path
+# Create graphviz file from domain redirects.
 # Example: cat domains.lst | ./callgraph | dot -Tpng -o graph.png
 
 # 2DO: Reenable 'set -euo' pipefail
