@@ -5,7 +5,7 @@ John Doe
 ```
 # ./genuserlst.py 
 Usage: ./genuserlst.py user.txt | sort -u > mylist.txt
-Script can handle entries of usersnames in the following formats:
+Script can handle entries of the following formats:
   John Doe
   Admin
   PeterParker:Spiderm4n
