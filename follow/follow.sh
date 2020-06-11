@@ -27,5 +27,3 @@ if [ $# = 1 ]; then
 else
   print_usage
 fi
-
-main
