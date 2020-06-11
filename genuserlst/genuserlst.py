@@ -7,7 +7,7 @@ def main():
    
     if len(sys.argv)<2:
       print("Usage: {} user.txt | sort -u > mylist.txt".format(sys.argv[0]))
-      print("Script can handle entries of usersnames in the following formats:")
+      print("Script can handle entries of the following formats:")
       print("  John Doe")
       print("  Admin")
       print("  PeterParker:Spiderm4n")
