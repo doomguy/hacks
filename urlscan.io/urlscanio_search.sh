@@ -19,7 +19,7 @@ main() {
   curl -s "https://urlscan.io/api/v1/search/?q=$DOMAIN" \
    | jq '.results|.[].task.url' \
    | grep -iE "$DOMAIN/" \
-   | xargs -I§ curl -s -o /dev/null -w "%{http_code}:%{url_effective}\n" § \
+   | xargs -I§ curl -s -o /dev/null -w "%{http_code}: %{url_effective}\n" § \
    | grep -v ^404
 }
 
