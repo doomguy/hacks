@@ -3,8 +3,7 @@
 import sys
 import os
 
-def main():
-   
+def main():   
     if len(sys.argv)<2:
       print("Usage: {} user.txt | sort -u > mylist.txt".format(sys.argv[0]))
       print("Script can handle entries of the following formats:")
@@ -16,22 +15,22 @@ def main():
     filepath = sys.argv[1]
 
     if not os.path.isfile(filepath):
-      print("File {} does not exist. Exiting...".format(filepath))
+      print("File {} does not exist. Exiting..".format(filepath))
       sys.exit()
   
     with open(filepath) as fp:
       for input in fp:
-        line=input.strip()
+        line=input.strip() # Get rid of whitespaces
         #print(line) # Debug
-        userpart=line.split(':') # Support for combolists 'johnDoe:s3cr3tp4$$w0rd"
+        combo=line.split(':') # Support for combolist like entries: 'JohnDoe:s3cr3tp4$$w0rd"
         #print(userpart) # Debug
-        nlist=userpart[0].split(' ')
+        nlist=combo[0].split(' ')
         #print(nlist) # Debug
 
-        print(userpart[0])      # Unmodified
+        print(combo[0])      # Unmodified
 
-        # If only one word is given, just print and continue with next entry
-        if len(nlist)<2:
+        # If only one word is present, just print and continue with next entry
+        if len(nlist) < 2:
           continue 
 
         print("{} {}".format(nlist[1],nlist[0]))  # l f
@@ -70,6 +69,8 @@ def main():
         print("{}.{}.".format(nlist[0][0],nlist[1][0]))  # 1f.1l.
         print("{}.{}.".format(nlist[1][0],nlist[0][0]))  # 1l.1f.
 
+        if len(nlist[0]) > 2 and len(nlist[1]) > 2:
+            print(nlist[0][0]+nlist[0][1]+nlist[0][2]+nlist[1][0]+nlist[1][1]+nlist[1][2]) # 1-3f1-3l
 
 if __name__ == '__main__':
     main()
