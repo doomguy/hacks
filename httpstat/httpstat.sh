@@ -7,6 +7,7 @@ IFS=$'\n\t'
 #set -x
 
 # Script to return status code of given urls
+
 # Usage: 
 #  cat urls.txt | ./httpstat.sh
 #  > curl $LINE
