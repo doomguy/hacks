@@ -6,7 +6,7 @@ IFS=$'\n\t'
 # Uncomment for Debugging
 #set -x
 
-# Script to return status code of given urls
+# Script to return status code of given urls/files
 
 # Usage: 
 #  cat urls.txt | ./httpstat.sh
