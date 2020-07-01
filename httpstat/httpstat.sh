@@ -7,6 +7,11 @@ IFS=$'\n\t'
 #set -x
 
 # Script to return status code of given urls
+# Usage: 
+#  cat urls.txt | ./httpstat.sh
+#  > curl $LINE
+#  cat files.txt | ./httpstat.sh http://example.com | grep -vE "(404|403)"
+#  > curl http://example.com/$LINE
 
 # 2DO:
 # - Implement proper user agent handling
