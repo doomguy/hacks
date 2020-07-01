@@ -11,6 +11,6 @@ IFS=$'\n\t'
 # 2DO:
 # - Implement proper user agent handling
 
-while IFS= read -r domain; do
-  curl -k -s -o /dev/null -w "%{http_code}: %{url_effective}\n" --connect-timeout 10 "$domain"
+while IFS= read -r URL; do
+  curl -k -s -o /dev/null -w "%{http_code}: %{url_effective}\n" --connect-timeout 10 "$URL"
 done
