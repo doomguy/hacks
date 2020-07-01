@@ -11,6 +11,16 @@ IFS=$'\n\t'
 # 2DO:
 # - Implement proper user agent handling
 
-while IFS= read -r URL; do
-  curl -k -s -o /dev/null -w "%{http_code}: %{url_effective}\n" --connect-timeout 10 "$URL"
+if [ "$#" -eq 1 ]; then
+  DOMAIN="$1/"
+else
+  DOMAIN=""
+fi
+
+while IFS= read -r LINE; do
+  if [[ "$LINE" =~ ^\./.*$ ]]; then
+    LINE=$(echo "$LINE" | cut -d"/" -f2-)  
+  fi
+
+  curl -k -s -o /dev/null -w "%{http_code}: %{url_effective}\n" --connect-timeout 10 "$DOMAIN$LINE"
 done
