@@ -64,7 +64,9 @@ if [ "$1" == "r" ] || [ "$1" == "rhost" ]; then
   FPATH="/dev/shm/.fxy"
   FILE="/dev/shm/.fxy/rhost"
   if [ "$#" -eq 2 ]; then
-    mkdir "$FPATH"
+    if [ ! -d "$FPATH" ]; then
+      mkdir "$FPATH"
+    fi
     echo "$2" > $FILE
   else
     echo "[!] You need to supply an IP or hostname as second argument!"
@@ -279,7 +281,9 @@ if [ "$1" == "linpeas" ]; then
   prompt
 
   FPATH="/dev/shm/.fxy/linpeas"
-  mkdir -p "$FPATH"
+  if [ ! -d "$FPATH" ]; then
+    mkdir -p "$FPATH"
+  fi
   cd "$FPATH"
 
   wget 'https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh' -O "$FPATH/linpeas.sh"
