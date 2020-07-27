@@ -11,7 +11,7 @@ Commands:
   fxy h(elp)                                    : Show this help
   fxy httpd|www [port]                          : python3 -m http.server PORT
   fxy linpeas [port]                            : Download linpeas and serve via http.server
-  fxy l|isten [port]                            : nc -vlp PORT
+  fxy l|isten [port]                            : nc -vlkp PORT
   fxy nikto                                     : nikto -host RHOST | tee
   fxy n(map) [full]                             : nmap -v -A (-p-) RHOST | tee
   fxy p(ing) [:count]                           : ping -c COUNT RHOST
