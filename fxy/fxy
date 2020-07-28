@@ -15,6 +15,8 @@ prompt() {
 }
 
 show_help() {
+  echo -e "\n[ FOXACID || Commando Script ]\n"
+  echo -e "Author: Doomguy (https://github.com/doomguy)\n"
   echo "Commands:"
   grep "^##" "$0" | cut -d' ' -f2- | while IFS= read -r cmd; do
     echo -e "  fxy $cmd"
@@ -58,8 +60,8 @@ if [ ! "$#" -ge 1 ] || [ "$1" == "h" ] || [ "$1" == "help" ]|| [ "$1" == "-h" ] 
   exit
 fi
 
-## r(host)\t\t\t\t\t: Set RHOST
-if [ "$1" == "r" ] || [ "$1" == "rhost" ]; then
+## r(host) [target]\t\t\t\t: Show/Set RHOST
+if [ "$#" -eq 2 ] && { [ "$1" == "r" ] || [ "$1" == "rhost" ]; }; then
   FPATH="/dev/shm/.fxy"
   FILE="/dev/shm/.fxy/rhost"
   if [ "$#" -eq 2 ]; then
@@ -73,7 +75,7 @@ if [ "$1" == "r" ] || [ "$1" == "rhost" ]; then
   exit
 fi
 
-# Load RHOST
+# Load RHOST from cache
 FILE="/dev/shm/.fxy/rhost"
 if [ -f $FILE ]; then
   RHOST="$(cat $FILE)"
@@ -88,27 +90,31 @@ else
   exit
 fi
 
-## e(nv)\t\t\t\t\t: Show environment
-if [ "$1" == "e" ] || [ "$1" == "env" ]; then
-  echo "Environment:"
+# Show RHOST
+if [ "$#" -eq 1 ] && { [ "$1" == "r" ] || [ "$1" == "rhost" ]; }; then
   echo "  RHOST: $RHOST"
   exit
 fi
 
-## httpd|www [port]\t\t\t\t: python3 -m http.server PORT
-if [ "$1" == "httpd" ] || [ "$1" == "www" ] ; then
+## httpd|ws [port]\t\t\t\t: python3 -m http.server PORT
+if [ "$1" == "httpd" ] || [ "$1" == "ws" ] ; then
   CMD="python3 -m http.server"
   PORT="80"
   if [ "$#" -eq 2 ]; then
     PORT="$2"
   fi
   CMD="$CMD $PORT"
+  echo "URL: http://$(getIP)/"
+  echo "DIR: $(pwd)"
+  for f in $(find . -maxdepth 1 -type f 2>/dev/null | sed 's,\./,,' | sed 's, ,+,'); do
+    echo "- http://$(getIP)/$f";
+  done
   echo "> $CMD"
   bash -c "$CMD"
   exit
 fi
 
-## l|isten [port]\t\t\t\t: nc -vlkp PORT
+## l(isten) [port]\t\t\t\t: nc -vlkp PORT
 if [ "$1" == "l" ] || [ "$1" == "listen" ] ; then
   CMD="nc -vlkp"
   if [ "$#" -eq 2 ]; then
@@ -135,7 +141,7 @@ if [ "$1" == "n" ] || [ "$1" == "nmap" ]; then
   exit
 fi
 
-## nikto [s|ssl|tls] [SUBDIR]\t\t: nikto -host RHOST+SUBDIR | tee
+## nikto [s|ssl|tls] [SUBDIR]\t\t: nikto -host PROTO://RHOST+SUBDIR | tee
 if [ "$1" == "nikto" ]; then
   CMD="nikto -host"
   PROTO="http"
@@ -149,7 +155,7 @@ if [ "$1" == "nikto" ]; then
 
     if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
       SUBDIR="$3"
-    elif [ "$#" -eq 2 ] && { [ "$2" != "s" ] || [ ! "$2" != "ssl" ] || [ ! "$2" != "tls" ]; }; then
+    elif [ "$#" -eq 2 ] && [ "$PROTO" == "http" ]; then
       SUBDIR="$2"
     fi
   fi
@@ -176,7 +182,7 @@ if [ "$1" == "cme" ] || [ "$1" == "crackmapexec" ]; then
   exit
 fi
 
-## dirb [s|ssl|tls] [SUBDIR]\t\t\t: dirb PROTO://RHOST/SUBDIR | tee
+## dirb [s|ssl|tls] [SUBDIR]\t\t\t: dirb PROTO://RHOST+SUBDIR | tee
 if [ "$1" == "dirb" ]; then
   CMD="dirb"
   PROTO="http"
@@ -190,7 +196,7 @@ if [ "$1" == "dirb" ]; then
 
     if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
       SUBDIR="$3"
-    elif [ "$#" -eq 2 ] && { [ "$2" != "s" ] || [ ! "$2" != "ssl" ] || [ ! "$2" != "tls" ]; }; then
+    elif [ "$#" -eq 2 ] && [ "$PROTO" == "http" ]; then
       SUBDIR="$2"
     fi
   fi
@@ -216,7 +222,7 @@ if [ "$1" == "curl" ]; then
 
     if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
       SUBDIR="$3"
-    elif [ "$#" -eq 2 ] && { [ "$2" != "s" ] || [ ! "$2" != "ssl" ] || [ ! "$2" != "tls" ]; }; then
+    elif [ "$#" -eq 2 ] && [ "$PROTO" == "http" ]; then
       SUBDIR="$2"
     fi
   fi
@@ -291,7 +297,7 @@ fi
 
 ## peas [version] [port]\t\t\t: Download *peas and serve via http.server
 if [ "$1" == "peas" ] && [ "$#" -eq 1 ]; then
-  echo "Available Commands:"
+  echo "Available commands:"
   echo "  fxy peas lin"
   echo "  fxy peas winbat"
   echo "  fxy peas winany"
@@ -343,12 +349,118 @@ if [ "$1" == "peas" ] && [ "$#" -ge 2 ] && { [ "$2" == "lin" ] || [ "$2" == "win
   exit
 fi
 
+## wfuzz\t\t\t\t\t: wfuzz | tee
+# wfuzz help
+if [ "$1" == "wfuzz" ] && [ "$#" -eq 1 ]; then
+  echo "Available commands:"
+  echo "  fxy wfuzz vhost [s|ssl|tls] [domain] [hw] [hc]"
+  echo "  fxy wfuzz [s|ssl|tls] [subdir] [hw] [hc]"
+  exit
+fi
+
+# wfuzz vhost
+if [ "$1" == "wfuzz" ] && [ "$2" == "vhost" ]; then
+  PROTO="http"
+  DOMAIN="$RHOST"
+  if [ "$#" -ge 3 ]; then
+    # is it https?
+    if [ "$3" == "s" ] || [ "$3" == "ssl" ] || [ "$3" == "tls" ]; then
+      PROTO="https"
+    fi
+
+    if [ "$#" -ge 4 ] && [ "$PROTO" == "https" ]; then
+      DOMAIN="$4"
+    elif [ "$#" -ge 3 ] && [ "$PROTO" == "http" ]; then
+      DOMAIN="$3"
+    fi
+  fi
+
+  # Setup tmp path and wordlist
+  FPATH="/dev/shm/.fxy/wfuzz"
+  if [ ! -d "$FPATH" ]; then
+    mkdir -p "$FPATH"
+  fi
+  cd "$FPATH"
+  if [ ! -f "subdomains-top1million-20000.txt" ]; then
+    wget 'https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-20000.txt' -O subdomains-top1million-20000.txt
+  fi
+
+  HW=""; HC=""
+  if [ "$#" -eq 4 ] && [ "$PROTO" == "http" ];  then HW="--hw $4"; fi
+  if [ "$#" -eq 5 ] && [ "$PROTO" == "http" ];  then HW="--hw $4"; HC="--hc $5"; fi
+  if [ "$#" -eq 5 ] && [ "$PROTO" == "https" ]; then HW="--hw $5"; fi
+  if [ "$#" -eq 6 ] && [ "$PROTO" == "https" ]; then HW="--hw $5"; HC="--hc $6"; fi
+
+  CMD="wfuzz -H 'Host: FUZZ.$DOMAIN' -u '$PROTO://$RHOST' -w $FPATH/subdomains-top1million-20000.txt $HW $HC"
+  CMD="$CMD | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  rm -rf "$FPATH"
+  exit
+fi
+
+# wfuzz normal
+if [ "$1" == "wfuzz" ] && [ "$2" != "vhost" ]; then
+  PROTO="http"
+  SUB="/"
+  if [ "$#" -ge 2 ]; then
+    # is it https?
+    if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
+      PROTO="https"
+    fi
+
+    if [ "$#" -ge 3 ] && [ "$PROTO" == "https" ]; then
+      SUB="$3"
+    elif [ "$#" -ge 2 ] && [ "$PROTO" == "http" ]; then
+      SUB="$2"
+    fi
+  fi
+
+  HW=""; HC=""
+  if [ "$#" -eq 3 ] && [ "$PROTO" == "http" ];  then HW="--hw $3"; fi
+  if [ "$#" -eq 4 ] && [ "$PROTO" == "http" ];  then HW="--hw $3"; HC="--hc $4"; fi
+  if [ "$#" -eq 4 ] && [ "$PROTO" == "https" ]; then HW="--hw $4"; fi
+  if [ "$#" -eq 5 ] && [ "$PROTO" == "https" ]; then HW="--hw $4"; HC="--hc $5"; fi
+
+  CMD="wfuzz -u '$PROTO://${RHOST}${SUB}' -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt $HW $HC"
+  CMD="$CMD | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  rm -rf "$FPATH"
+  exit
+fi
+
+## cewl [s|ssl|tls] [SUBDIR]\t\t\t: cewl PROTO://RHOST+SUBDIR -w RHOST_cewl.txt
+if [ "$1" == "cewl" ]; then
+  CMD="cewl"
+  PROTO="http"
+  SUBDIR="/"
+  # more than 1 arg?
+  if [ "$#" -ge 2 ]; then
+    # is it https?
+    if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
+      PROTO="https"
+    fi
+
+    if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
+      SUBDIR="$3"
+    elif [ "$#" -eq 2 ] && [ "$PROTO" == "http" ]; then
+      SUBDIR="$2"
+    fi
+  fi
+
+  CMD="$CMD $PROTO://${RHOST}${SUBDIR} -w ${RHOST}_cewl.txt"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
 # showmount -e 10.10.10.180
 # fcrackzip -D -p /usr/share/wordlists/rockyou.txt 16162020_backup.zip
-# winpeas
-# gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
-# cewl http://10.10.10.191 -w cewl.lst
-# wfuzz
+# # gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
 # hydra
 # msf multi handler
 # weevely
