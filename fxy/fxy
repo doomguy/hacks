@@ -137,7 +137,7 @@ if [ "$#" -eq 1 ] && { [ "$1" == "r" ] || [ "$1" == "rhost" ]; }; then
   exit
 fi
 
-## creds [add user:pass] [del cid]\t\t: Show/Add/Del creds
+## creds [add user:pass]|[del cid]\t\t: Show/Add/Del creds
 if [ "$1" == "creds" ]; then
   FILE="creds.txt"
   if [ "$#" -eq 1 ]; then
@@ -166,10 +166,11 @@ if [ "$1" == "creds" ]; then
   exit
 fi
 
-## pass(word)\t\t\t\t: Show machine password
+## pass(word)\t\t\t\t: Show default machine password
 if [ "$#" -eq 1 ] && { [ "$1" == "pass" ] || [ "$1" == "password" ]; }; then
   getMachinePass
-  echo "  PASS: $PASSWD"
+  echo -e "\n  The following password is used as default value in various locations and is unique to this machine."
+  echo -e "\n  Default machine password: $PASSWD\n"
   exit
 fi
 
