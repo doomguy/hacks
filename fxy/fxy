@@ -842,12 +842,20 @@ fi
 # hashsearch help
 if { [ "$1" == "hashsearch" ] || [ "$1" == "hs" ]; } && [ "$#" -eq 1 ]; then
   echo "Available commands:"
-  echo "  fxy h(ash)s(earch) [md5|sha1|sha256|sha356|sha512] [hash]"
+  echo "  fxy h(ash)s(earch) [md5|sha(1)|sha2(56)|sha3(56)|sha5(12)] [hash]"
   exit
 fi
 
 if { [ "$1" == "hashsearch" ] || [ "$1" == "hs" ]; } && [ "$#" -eq 3 ]; then
-  TYPE="$2"
+  case "$2" in
+    "md5" )             TYPE="md5" ;;
+    "sha"|"sha1")       TYPE="sha1" ;;
+    "sha256"|"sha2")    TYPE="sha256" ;;
+    "sha384"|"sha3")    TYPE="sha356" ;;
+    "sha512"|"sha5")    TYPE="sha512" ;;
+    *)                  echo "[!] Error parsing type of hash!"; exit ;;
+  esac
+
   HASH="$3"
 
   RES="$(curl -ski https://hashtoolkit.com/reverse-$TYPE-hash/?hash=$HASH)"
@@ -866,7 +874,7 @@ fi
 # hashgen help
 if { [ "$1" == "hashgen" ] || [ "$1" == "hg" ]; } && [ "$#" -eq 1 ]; then
   echo "Available commands:"
-  echo "  fxy h(ash)g(en) [md5|sha1|sha256|sha356|sha512] [hash]"
+  echo "  fxy h(ash)g(en) [md5|sha(1)|sha2(56)|sha3(84)|sha5(12)] [hash]"
   exit
 fi
 
@@ -883,7 +891,7 @@ if { [ "$1" == "hashgen" ] || [ "$1" == "hg" ]; } && [ "$#" -eq 3 ]; then
     *)                  echo "[!] Error parsing type of hash!"; exit ;;
   esac
 
-  echo -e "\n$($CMD <<< "$INPUT" | cut -d' ' -f1)\n"
+  echo -e "\n$(echo -n "$INPUT" | $CMD | cut -d' ' -f1)\n"
   exit
 fi
 
