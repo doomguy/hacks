@@ -60,14 +60,16 @@ def main():
         print("{}_{}".format(nlist[0],nlist[1][0]))  # f_1l
         print("{}_{}".format(nlist[1],nlist[0][0]))  # l_1f
 
+        print("{}{}".format(nlist[0][0],nlist[1][0]))  # 1f1l
+        print("{}{}".format(nlist[1][0],nlist[0][0]))  # 1l1f
+
         print("{}.{}".format(nlist[0][0],nlist[1][0]))  # 1f.1l
         print("{}.{}".format(nlist[1][0],nlist[0][0]))  # 1l.1f
 
         print("{}_{}".format(nlist[0][0],nlist[1][0]))  # 1f_1l
         print("{}_{}".format(nlist[1][0],nlist[0][0]))  # 1l_1f
 
-        print("{}.{}.".format(nlist[0][0],nlist[1][0]))  # 1f.1l.
-        print("{}.{}.".format(nlist[1][0],nlist[0][0]))  # 1l.1f.
+        print("{}{}{}".format(nlist[0][0],nlist[1][0],nlist[1][1]))  # 1f1l2l
 
         if len(nlist[0]) > 2 and len(nlist[1]) > 2:
             print(nlist[0][0]+nlist[0][1]+nlist[0][2]+nlist[1][0]+nlist[1][1]+nlist[1][2]) # 1-3f1-3l
