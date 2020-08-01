@@ -756,6 +756,7 @@ if [ "$1" == "hydra" ] && [ "$#" -eq 1 ]; then
   echo "  fxy hydra ftp [port] [username]"
   echo "  fxy hydra smb [port] [username]"
   echo "  fxy hydra http [url] [username] [subdir]"
+  echo -e "\n[i] For more check out: https://book.hacktricks.xyz/brute-force"
   exit
 fi
 
@@ -804,9 +805,13 @@ fi
 if { [ "$1" == "revshell" ] || [ "$1" == "rev" ]; } && [ "$#" -eq 1 ]; then
   echo "Available commands:"
   echo "  fxy revshell [type] [port]"
-  echo -e "\nAvailable types:"
-  echo "  bash, php, pyton2|py2, python|python3, py|py3, perl, ruby, nc|ncat|netcat, awk\n"
-  echo -e "\n[*] Checkout for more: https://book.hacktricks.xyz/shells/shells/linux\n"
+  echo -e "\nAvailable revshells:"
+  SHELLS="bash php pyton2|py2 python|python3|py|py3 perl ruby nc|ncat|netcat awk go psh lua telnet"
+  IFS=" "
+  for i in $SHELLS; do
+    echo "[+] $i"
+  done | sort
+  echo -e "\n[i] Checkout for more: https://book.hacktricks.xyz/shells/shells/linux\n"
   exit
 fi
 
@@ -847,28 +852,54 @@ if { [ "$1" == "hashsearch" ] || [ "$1" == "hs" ]; } && [ "$#" -eq 1 ]; then
 fi
 
 if { [ "$1" == "hashsearch" ] || [ "$1" == "hs" ]; } && [ "$#" -eq 3 ]; then
+  HASH="$3"
+
   case "$2" in
-    "md5" )             TYPE="md5" ;;
+    "md5")              TYPE="md5" ;;
     "sha"|"sha1")       TYPE="sha1" ;;
     "sha256"|"sha2")    TYPE="sha256" ;;
     "sha384"|"sha3")    TYPE="sha356" ;;
     "sha512"|"sha5")    TYPE="sha512" ;;
+    "lm"|"LM")          TYPE="lm" ;;
+    "ntlm"|"NTLM")      TYPE="ntlm" ;;
     *)                  echo "[!] Error parsing type of hash!"; exit ;;
   esac
 
-  HASH="$3"
+  if [[ "$TYPE" =~ md5|sha1|sha256|sha356|sha512 ]]; then
+    RES="$(curl -ski https://hashtoolkit.com/reverse-$TYPE-hash/?hash=$HASH)"
 
-  RES="$(curl -ski https://hashtoolkit.com/reverse-$TYPE-hash/?hash=$HASH)"
-
-  if [ -n "$(grep -i 'No hashes found for' <<< $RES)" ]; then
-    echo -e "\n[!] hashtoolkit.com: No hashes found\n"; exit
-  else
-    PASSWD="$(grep -m 1 -io "/generate-hash/?text=.*>" <<< $RES | cut -d'>' -f2 | sed 's,</a,,')"
-    PASSWD="$(sed 's,&lt;,<,' <<< $PASSWD)"
-    PASSWD="$(sed 's,&gt;,>,' <<< $PASSWD)"
-    echo -e "\n[*] Match found: $PASSWD\n"; exit
+    if [ -n "$(grep -i 'No hashes found for' <<< "$RES")" ]; then
+      echo "[!] (hashtoolkit.com) No match found!";
+    else
+      PASSWD="$(grep -m 1 -io "/generate-hash/?text=.*>" <<< "$RES" | cut -d'>' -f2 | sed 's,</a,,')"
+      PASSWD="$(sed 's,&lt;,<,' <<< "$PASSWD")"
+      PASSWD="$(sed 's,&gt;,>,' <<< "$PASSWD")"
+      echo "[*] (hashtoolkit.com) Match found: $PASSWD"; exit
+    fi
   fi
+
+  if [[ "$TYPE" =~ md5|sha1|sha256|lm|ntlm ]]; then
+    RES=$(curl -ski "https://reverse-hash-lookup.online-domain-tools.com/" --data "text=$HASH&function=$TYPE&do=form-submit&phone=5deab72563840e7678c4067671849b85332d7438&send=%3E+Reverse!")
+    if [ -n "$(grep -i 'You do not have enough credits in your account.' <<< "$RES")" ]; then
+      echo "[!] (online-domain-tools.com) No free credits left!";
+    elif [ -n "$(grep -i 'Hash #1:</b> ERROR:' <<< "$RES")" ]; then
+      echo "[!] (online-domain-tools.com) No match found or error!";
+    else
+      PASSWD="$(grep -o -m 1 "Hash #1.*" <<< "$RES" | cut -d' ' -f3 | sed 's,</.*$,,')"
+      PASSWD="$(sed 's,&lt;,<,' <<< "$PASSWD")"
+      PASSWD="$(sed 's,&gt;,>,' <<< "$PASSWD")"
+      echo "[*] (online-domain-tools.com) Match found: $PASSWD"
+    fi
+  fi
+
+  # Still here?
+  echo -e "\nNothing found so far. Want to do it manually on crackstation.net?"
+  CMD="firefox 'https://crackstation.net'"
+  echo "> $CMD"; prompt; bash -c "$CMD"; exit
 fi
+# 2DO:
+# - https://md5decrypt.net/en/Api/
+
 
 ## h(ash)g(en) [md5|sha1|sha256|...] [input]\t: Generate hashes from input
 # hashgen help
@@ -891,14 +922,24 @@ if { [ "$1" == "hashgen" ] || [ "$1" == "hg" ]; } && [ "$#" -eq 3 ]; then
     *)                  echo "[!] Error parsing type of hash!"; exit ;;
   esac
 
-  echo -e "\n$(echo -n "$INPUT" | $CMD | cut -d' ' -f1)\n"
+  echo "$(echo -n "$INPUT" | $CMD | cut -d' ' -f1)"
   exit
 fi
 
+## h(ash)i(d) [hash]\t: Identify hash type
+if { [ "$1" == "hashid" ] || [ "$1" == "hid" ] || [ "$1" == "hi" ]; } && [ "$#" -eq 2 ]; then
+  HASH="$2"
+  if [ "$(which hashid)" ]; then
+    echo "=== hashid ==="
+    hashid "$HASH" | grep -v ^Analyzing; echo
+  fi
+  if [ "$(which hash-identifier)" ] ;then
+    echo "=== hash-identifier ==="
+    echo -n "$HASH" | hash-identifier 2>/dev/null| sed '1,14d' | head -n -2
+  fi
+  exit
+fi
 
-
-
-# fcrackzip -D -p /usr/share/wordlists/rockyou.txt 16162020_backup.zip
 # gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
 # msf multi handler
 # msf venom most common
