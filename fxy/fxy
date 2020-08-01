@@ -84,7 +84,7 @@ createUserPassLists() {
     mkdir "$FPATH"
   fi
   # userlist
-  if [ "$(which "genuserlst.py")" ]; then
+  if [ "$(which "userlstgen.py")" ]; then
     genuserlst.py "$FILE" | tr '[:upper:]' '[:lower:]' | sort -u > "$FPATH/user.lst"
   else
     echo "[*] Did not find 'genuserlst.py' in PATH. Falling back to simple mode."
