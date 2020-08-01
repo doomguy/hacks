@@ -3,7 +3,7 @@
 John Doe
 ```
 ```
-# ./genuserlst.py 
+# ./userlstgen.py 
 Usage: ./genuserlst.py user.txt | sort -u > mylist.txt
 Script can handle entries of the following formats:
   John Doe
@@ -11,7 +11,7 @@ Script can handle entries of the following formats:
   PeterParker:Spiderm4n
 ```
 ```
-# ./genuserlst.py john.txt 
+# ./userlstgen.py john.txt 
 John Doe
 Doe John
 John
@@ -43,7 +43,7 @@ JohDoe
 ```
 
 ```
-# ./genuserlst.py john.txt | tr '[:upper:]' '[:lower:]'
+# ./userlstgen.py john.txt | tr '[:upper:]' '[:lower:]'
 john doe
 doe john
 john
