@@ -7,7 +7,7 @@ IFS=$'\n\t'
 #set -x
 
 # Show 2DOs - internal command
-if [ "$1" == "2do" ]; then
+if [ "$#" -eq 1 ] && [ "$1" == "2do" ]; then
   grep -Ein "^##|^# 2DO|^# -" "$0" | sed 's,\\t.*,,'
   exit
 fi
@@ -969,7 +969,7 @@ if { [ "$1" == "hashid" ] || [ "$1" == "hid" ] || [ "$1" == "hi" ]; } && [ "$#" 
   exit
 fi
 
-## h(ash)c(rack) [type] [hash|cid]\t\t\t\t: Crack hash
+## h(ash)c(rack) [type] [hash|cid]\t\t: Crack hash
 if { [ "$1" == "hashcrack" ] || [ "$1" == "hc" ]; } && [ "$#" -eq 3 ]; then
   WRDLST="/usr/share/wordlists/rockyou.txt"
   if [ ! -f "$WRDLST" ]; then
@@ -999,8 +999,8 @@ if { [ "$1" == "hashcrack" ] || [ "$1" == "hc" ]; } && [ "$#" -eq 3 ]; then
     getCreds
   fi
   # write hash to file with username
-  CMD1="echo \"$USRNME:$HASH\" > \"hash_$USRNME.txt\""
-  CMD2="john --format=$JTYPE --wordlist $WRDLST"
+  CMD1="echo \"$USRNME:$HASH\" > hash_$USRNME.txt"
+  CMD2="john --format=$JTYPE --wordlist $WRDLST --fork=2 --pot=hash.pot hash_$USRNME.txt"
   echo -e "> $CMD1\n> $CMD2"; prompt; bash -c "$CMD1; $CMD2"; exit
 fi
 # 2DO:
