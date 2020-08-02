@@ -1,0 +1,11 @@
+curl ifconfig.me
+curl checkip.dyndns.org
+curl checkip.amazonaws.com
+curl api.ipify.org
+curl ipinfo.io/ip
+curl wtfismyip.com/text
+curl -s http://www.nirsoft.net/show_my_ip_address.php | grep -A2 "Your external IP Address" | tail -n1
+curl -s https://www.wieistmeineip.de/ | grep wimip.ip
+curl -s myexternalip.com | grep data-ip
+curl -s https://www.myip.com/ | grep 'id="ip"'
+(https://www.whatismyip.com/)
