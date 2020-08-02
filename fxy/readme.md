@@ -11,12 +11,15 @@ Available commands:
   fxy curl [s|ssl|tls] [subdir]                 : curl -si PROTO://RHOST+SUBDIR | less
   fxy dirb [s|ssl|tls] [subdir]                 : dirb PROTO://RHOST+SUBDIR | tee
   fxy (evil-)winrm [cid]                        : evil-winrm -i RHOST -u :cid_user -p :cid_pass
+  fxy h(ash)c(rack) [type] [hash|cid]           : Crack hash
   fxy h(ash)g(en) [md5|sha1|sha256|...] [input] : Generate hashes from input
+  fxy h(ash)i(d) [hash]                         : Identify hash type
   fxy h(ash)s(earch) [md5|sha1|...] [hash]      : Search for hashes
   fxy h(elp)                                    : Show this help
   fxy httpd|ws [port]                           : python3 -m http.server PORT
   fxy hydra [service] [port] [username]         : hydra brute force (ssh, ftp, smb)
   fxy (i)conv|convert [file]                    : iconv -f UTF-16LE -t UTF-8 FILE -o FILE.conv
+  fxy ipwsh [port]                              : Download InsecurePowerShell and serve via davserver
   fxy l(isten) [port]                           : ncat -vlkp PORT
   fxy nfs|showmount                             : showmount -e RHOST
   fxy nikto [s|ssl|tls] [subdir]                : nikto -host PROTO://RHOST+SUBDIR | tee
@@ -24,7 +27,7 @@ Available commands:
   fxy pass(word)                                : Show default machine password
   fxy peas [version] [port]                     : Download *peas and serve via http.server
   fxy p(ing) [count]                            : ping -c COUNT RHOST
-  fxy rev(shell) [type] [port]                  : Reverse shells (bash, php, python, perl, ...)
+  fxy rev(shell) [type] [port]                  : Reverse shell generator (bash, php, python, perl, ...)
   fxy r(host) [target]                          : Show/Set RHOST
   fxy rpc(client) [cid] [domain] [cmd]          : rpcclient
   fxy smbpasswd [cid]                           : smbpasswd -r RHOST -U :cid_user
