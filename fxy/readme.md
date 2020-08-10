@@ -36,7 +36,7 @@ Available commands:
   fxy  socat [port]                               : socat based listener
   fxy  ssh [cid] [port]                           : sshpass -e ssh :cid_user@RHOST -p PORT
   fxy  weevely [gen|help]                         : weevely php shell
-  fxy  wfuzz 
+  fxy  wfuzz                                      : wfuzz | tee
 ```
   
 ```
