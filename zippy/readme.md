@@ -1,3 +1,4 @@
+# ZipPy
 Example on how to run python code from an encrypted zip archive.
 
 ```
