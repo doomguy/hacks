@@ -1,3 +1,5 @@
+Example on how to run python code from an encrypted zip archive.
+
 ```
 $ cat hello.py
 print("Hello World!")
