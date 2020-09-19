@@ -1,7 +1,7 @@
-# drops.sh
+# drops
 Dropshell/Command Execution Vulnerability CLI client similar to weevely.
 
-# Features
+## Features
 * GET/POST
 * Colorful prompt :)
 * Uploading/downlaoding of files
@@ -10,7 +10,7 @@ Dropshell/Command Execution Vulnerability CLI client similar to weevely.
 * Debug switch to see what is called
 * Remove lines before and after output
 
-# Usage
+## Usage
 ```
 ./drops.sh <get|post> example.com/file.php <params> <rm-lines-before> <rm-lines-after>
 ```
