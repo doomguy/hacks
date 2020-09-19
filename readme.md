@@ -1,5 +1,5 @@
 # hacks
-A collection of hacks and one-off scripts 
+A collection of hacks and one-off scripts.
 
 ```
 callgraph    Create graphviz file from domain redirects.
