@@ -1,5 +1,5 @@
 # interlace.d
-Scripts for interlace (github.com/codingo/Interlace)
+Scripts for interlace (github.com/codingo/Interlace).
 
 # Usage
 ```
