@@ -1,3 +1,6 @@
+# usrlstgen
+Create a list of possible usernames from seed file.
+
 ```
 # cat john.txt 
 John Doe

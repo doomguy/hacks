@@ -1,5 +1,5 @@
 # domlook.sh
-Script to dns query multiple domains and generate grepable output.
+DNS query multiple domains and generate grepable output.
 
 ## Usage
 ```

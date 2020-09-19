@@ -1,3 +1,6 @@
+# Tiny PHP Shell
+An example for a minimal php get/post shell/backdoor.
+
 ## Tiny PHP GET shell
 #### get.php:
 ```php
