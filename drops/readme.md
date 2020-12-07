@@ -5,7 +5,7 @@ Dropshell/Command Execution Vulnerability CLI client similar to weevely.
 * GET/POST
 * Colorful prompt :)
 * Uploading/downlaoding of files
-* Supports for "less $file" (will actually cat the file and run less locally)
+* Supports for "less filename" (will actually cat the file and run less locally)
 * Local commands via "!" (Try "pwd" vs "!pwd")
 * Debug switch to see what is called
 * Remove lines before and after output
