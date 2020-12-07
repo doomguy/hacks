@@ -2,7 +2,8 @@
 Dropshell/Command Execution Vulnerability CLI client similar to weevely.
 
 ## Features
-* GET/POST
+* Pure bash <3
+* Supports GET/POST
 * Colorful prompt :)
 * Uploading/downlaoding of files
 * Supports for "less filename" (will actually cat the file and run less locally)
