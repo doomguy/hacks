@@ -43,26 +43,30 @@ fi
 
 ## Applications
 
-# Upgrade atom
-if [ -f "$(which apm)" ] && [ -x "$(which apm)" ]; then
-    echo -e "\n[*] Starting atom updates using 'apm'"
-    apm upgrade -c false
+# Python pip3
+if [ -f "$(which pip3)" ] && [ -x "$(which pip3)" ]; then
+    echo -e "\n[*] Starting Python pip updates using 'pip3'"
+    pip3 install --upgrade pip &&
+    for p in $(pip3 list -o --format freeze); do pip3 install -U ${p%%=*}; done &&
+    pip3 check
 fi
 
-# Python pip
-# pip
-# python3 -m pip3 install --upgrade pip
-
-# ruby gems
+# Ruby gems
 if [ -f "$(which gem)" ] && [ -x "$(which gem)" ]; then
     echo -e "\n[*] Starting ruby gem updates using 'gem'"
     gem update
 fi
 
-# npm upgrade
+# Node.js npm upgrade
 if [ -f "$(which npm)" ] && [ -x "$(which npm)" ]; then
     echo -e "\n[*] Starting npm updates using 'npm'"
     npm update -g
+fi
+
+# Upgrade Atom
+if [ -f "$(which apm)" ] && [ -x "$(which apm)" ]; then
+    echo -e "\n[*] Starting atom updates using 'apm'"
+    apm upgrade -c false
 fi
 
 echo -e "\n[*] All done! Exiting.."
