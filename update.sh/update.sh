@@ -7,6 +7,12 @@ export LC_ALL=C
 # Uncomment for Debugging
 #set -x
 
+# Check if root
+if [ ! "$(id -u)" -eq 0 ]; then
+    echo -e "\n[!] This needs to run as 'root'. Try 'sudo $0'"
+    exit
+fi 
+
 ## Operating Systems
 
 # Debian/Ubuntu
@@ -32,9 +38,15 @@ if [ -f "$(which pacman)" ] && [ -x "$(which pacman)" ]; then
     pacman -Syu
 fi
 
+# macOS
+if [ -f "$(which softwareupdate)" ] && [ -x "$(which softwareupdate)" ]; then
+    echo -e "\n[*] Starting macOS updates using 'softwareupdate'"
+    softwareupdate -i -a
+fi
+
 # macOS Homebrew
 if [ -f "$(which brew)" ] && [ -x "$(which brew)" ]; then
-    echo -e "\n[*] Starting updates using 'brew'"
+    echo -e "\n[*] Starting Homewwbrew updates using 'brew'"
     brew update &&
     brew upgrade &&
     brew cleanup -s &&
