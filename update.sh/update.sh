@@ -9,7 +9,7 @@ export LC_ALL=C
 
 # Check if root
 if [ ! "$(id -u)" -eq 0 ]; then
-    echo -e "\n[!] This needs to run as 'root'. Try 'sudo $0'"
+    echo "[!] This needs to run as 'root'. Try 'sudo $0'"
     exit
 fi 
 
