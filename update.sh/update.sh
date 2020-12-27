@@ -26,7 +26,7 @@ elif [ -f "$(which yum)" ] && [ -x "$(which yum)" ]; then
     yum update
 fi
 
-# Arch/Manjaro system upgrade
+# Arch/Manjaro
 if [ -f "$(which pacman)" ] && [ -x "$(which pacman)" ]; then
     echo "[*] Starting updates using 'pacman'"
     pacman -Syu
