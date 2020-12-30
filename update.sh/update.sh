@@ -7,9 +7,13 @@ export LC_ALL=C
 # Uncomment for Debugging
 #set -x
 
+# txtstuff
+bold=$(tput bold)
+normal=$(tput sgr0)
+
 # Check if root
 if [ ! "$(id -u)" -eq 0 ]; then
-    echo "[!] This needs to run as 'root'. Try 'sudo $0'"
+    echo "${bold}[!] This needs to run as 'root'. Try 'sudo $0'${normal}"
     exit
 fi 
 
@@ -17,7 +21,7 @@ fi
 
 # Debian/Ubuntu
 if [ -f "$(which apt)" ] && [ -x "$(which apt)" ]; then
-    echo -e "\n[*] Starting updates using 'apt'"
+    echo -e "${bold}\n[*] Starting updates using 'apt'${normal}"
     apt update &&
     apt dist-upgrade -y
     #apt autoremove -y
@@ -25,28 +29,33 @@ fi
 
 # CentOS/Fedora
 if [ -f "$(which dnf)" ] && [ -x "$(which dnf)" ]; then
-    echo -e "\n[*] Starting updates using 'dnf'"
+    echo -e "${bold}\n[*] Starting updates using 'dnf'${normal}"
     dnf update
 elif [ -f "$(which yum)" ] && [ -x "$(which yum)" ]; then
-    echo -e "\n[*] Starting updates using 'yum'"
+    echo -e "${bold}\n[*] Starting updates using 'yum'${normal}"
     yum update
 fi
 
 # Arch/Manjaro
 if [ -f "$(which pacman)" ] && [ -x "$(which pacman)" ]; then
-    echo -e "\n[*] Starting updates using 'pacman'"
+    echo -e "${bold}\n[*] Starting updates using 'pacman'${normal}"
     pacman -Syu
+
+    echo -e "${bold}\n[*] Removing orphaned packages using 'pacman'${normal}"
+    set +e
+    pacman -Qtdq | pacman -Rns -
+    set -e
 fi
 
 # macOS
 if [ -f "$(which softwareupdate)" ] && [ -x "$(which softwareupdate)" ]; then
-    echo -e "\n[*] Starting macOS updates using 'softwareupdate'"
+    echo -e "${bold}\n[*] Starting macOS updates using 'softwareupdate'${normal}"
     softwareupdate -i -a
 fi
 
 # macOS Homebrew
 if [ -f "$(which brew)" ] && [ -x "$(which brew)" ]; then
-    echo -e "\n[*] Starting Homewwbrew updates using 'brew'"
+    echo -e "${bold}\n[*] Starting Homewwbrew updates using 'brew'${normal}"
     brew update &&
     brew upgrade &&
     brew cleanup -s &&
@@ -57,7 +66,7 @@ fi
 
 # Python pip3
 if [ -f "$(which pip3)" ] && [ -x "$(which pip3)" ]; then
-    echo -e "\n[*] Starting Python pip updates using 'pip3'"
+    echo -e "${bold}\n[*] Starting Python pip updates using 'pip3'${normal}"
     pip3 install --upgrade pip &&
     for p in $(pip3 list -o --format freeze); do pip3 install -U "${p%%=*}"; done &&
     pip3 check
@@ -65,20 +74,20 @@ fi
 
 # Ruby gems
 if [ -f "$(which gem)" ] && [ -x "$(which gem)" ]; then
-    echo -e "\n[*] Starting ruby gem updates using 'gem'"
+    echo -e "${bold}\n[*] Starting ruby gem updates using 'gem'${normal}"
     gem update
 fi
 
 # Node.js npm upgrade
 if [ -f "$(which npm)" ] && [ -x "$(which npm)" ]; then
-    echo -e "\n[*] Starting Node.js updates using 'npm'"
+    echo -e "${bold}\n[*] Starting Node.js updates using 'npm'${normal}"
     npm update -g
 fi
 
 # Upgrade Atom
 if [ -f "$(which apm)" ] && [ -x "$(which apm)" ]; then
-    echo -e "\n[*] Starting atom updates using 'apm'"
+    echo -e "${bold}\n[*] Starting atom updates using 'apm'${normal}"
     apm upgrade -c false
 fi
 
-echo -e "\n[*] All done! Exiting.."
+echo -e "${bold}\n[*] All done! Exiting..${normal}"
