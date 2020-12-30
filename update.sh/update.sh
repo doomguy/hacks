@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Remeber to use: https://www.shellcheck.net
-set -euo pipefail
+#set -euo pipefail
 IFS=$'\n\t'
 export LC_ALL=C
 
@@ -13,7 +13,7 @@ normal=$(tput sgr0)
 
 # Check if root
 if [ ! "$(id -u)" -eq 0 ]; then
-    echo "${bold}[!] This needs to run as 'root'. Try 'sudo $0'${normal}"
+    echo "${bold}[!] This script needs to run as 'root'. Try 'sudo $0'${normal}"
     exit
 fi 
 
@@ -23,8 +23,10 @@ fi
 if [ -f "$(which apt)" ] && [ -x "$(which apt)" ]; then
     echo -e "${bold}\n[*] Starting updates using 'apt'${normal}"
     apt update &&
-    apt dist-upgrade -y
-    #apt autoremove -y
+    apt dist-upgrade -y &&
+    apt-get check &&
+    echo -e "${bold}\n[*] Removing old packages using 'apt autoremove'${normal}"
+    apt autoremove
 fi
 
 # CentOS/Fedora
@@ -42,9 +44,9 @@ if [ -f "$(which pacman)" ] && [ -x "$(which pacman)" ]; then
     pacman -Syu
 
     echo -e "${bold}\n[*] Removing orphaned packages using 'pacman'${normal}"
-    set +e
+    #set +e
     pacman -Qtdq | pacman -Rns -
-    set -e
+    #set -e
 fi
 
 # macOS
@@ -55,7 +57,7 @@ fi
 
 # macOS Homebrew
 if [ -f "$(which brew)" ] && [ -x "$(which brew)" ]; then
-    echo -e "${bold}\n[*] Starting Homewwbrew updates using 'brew'${normal}"
+    echo -e "${bold}\n[*] Starting Homebrew updates using 'brew'${normal}"
     brew update &&
     brew upgrade &&
     brew cleanup -s &&
@@ -69,7 +71,9 @@ if [ -f "$(which pip3)" ] && [ -x "$(which pip3)" ]; then
     echo -e "${bold}\n[*] Starting Python pip updates using 'pip3'${normal}"
     pip3 install --upgrade pip &&
     for p in $(pip3 list -o --format freeze); do pip3 install -U "${p%%=*}"; done &&
-    pip3 check
+    
+    echo -e "${bold}\n[*] Installing missing dependencies using 'pip3 check'${normal}"
+    pip3 check | grep 'is not' | awk '{print $4}' | cut -d, -f1 | xargs -i% pip3 install %
 fi
 
 # Ruby gems
