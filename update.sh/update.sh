@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Remeber to use: https://www.shellcheck.net
-#set -euo pipefail
+set -euo pipefail
 IFS=$'\n\t'
 export LC_ALL=C
 
@@ -44,9 +44,9 @@ if [ -f "$(which pacman)" ] && [ -x "$(which pacman)" ]; then
     pacman -Syu
 
     echo -e "${bold}\n[*] Removing orphaned packages using 'pacman'${normal}"
-    #set +e
+    set +e
     pacman -Qtdq | pacman -Rns -
-    #set -e
+    set -e
 fi
 
 # macOS
@@ -65,6 +65,8 @@ if [ -f "$(which brew)" ] && [ -x "$(which brew)" ]; then
 fi
 
 ## Applications
+# Disabling exit on error here to keep script running
+set +e
 
 # Python pip3
 if [ -f "$(which pip3)" ] && [ -x "$(which pip3)" ]; then
