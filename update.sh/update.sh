@@ -59,7 +59,7 @@ fi
 if [ -f "$(which pip3)" ] && [ -x "$(which pip3)" ]; then
     echo -e "\n[*] Starting Python pip updates using 'pip3'"
     pip3 install --upgrade pip &&
-    for p in $(pip3 list -o --format freeze); do pip3 install -U ${p%%=*}; done &&
+    for p in $(pip3 list -o --format freeze); do pip3 install -U "${p%%=*}"; done &&
     pip3 check
 fi
 
@@ -71,7 +71,7 @@ fi
 
 # Node.js npm upgrade
 if [ -f "$(which npm)" ] && [ -x "$(which npm)" ]; then
-    echo -e "\n[*] Starting npm updates using 'npm'"
+    echo -e "\n[*] Starting Node.js updates using 'npm'"
     npm update -g
 fi
 
