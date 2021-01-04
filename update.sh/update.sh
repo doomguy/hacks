@@ -53,6 +53,7 @@ fi
 if [ -f "$(which softwareupdate)" ] && [ -x "$(which softwareupdate)" ]; then
     echo -e "${bold}\n[*] Starting macOS updates using 'softwareupdate'${normal}"
     softwareupdate -i -a
+    # find ~/Library/Caches/com.apple.Music/SubscriptionPlayCache -type f -atime +90 -delete
 fi
 
 # macOS Homebrew
