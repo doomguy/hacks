@@ -1,0 +1,1 @@
+nuclei -u "http://_target_:_port_" -json -o _target_-_port__$(date +%F).nuclei.json

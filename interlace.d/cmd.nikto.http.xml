@@ -1,1 +1,1 @@
-$HOME/bin/nikto/program/nikto.pl -config $HOME/bin/nikto/program/nikto.conf -useragent "$USER_AGENT" -host _target_:_port_ -nossl -Format xml -output _target_:_port__$(date +%F).nikto.xml >/dev/null
+$HOME/bin/nikto/program/nikto.pl -config $HOME/bin/nikto/program/nikto.conf -useragent "$USER_AGENT" -host _target_:_port_ -nossl -Format xml -output _target_-_port__$(date +%F).nikto.xml >/dev/null

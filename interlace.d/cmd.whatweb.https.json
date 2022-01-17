@@ -1,1 +1,1 @@
-ruby $HOME/bin/WhatWeb/whatweb -a 3 --follow-redirect always --user-agent "$USER_AGENT" --log-json  _target_:_port__$(date +%F).whatweb.json https://_target_:_port_
+ruby $HOME/bin/WhatWeb/whatweb -a 3 --follow-redirect always --user-agent "$USER_AGENT" --log-json _target_-_port__$(date +%F).whatweb.json https://_target_:_port_
