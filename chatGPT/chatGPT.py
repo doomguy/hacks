@@ -71,7 +71,7 @@ def main(args):
             continue
         elif prompt.strip().lower() in cmds_exit:
             sys.exit(1)
-        elif prompt.strip() in cmds_clear:
+        elif prompt.strip().lower() in cmds_clear:
             os.system("clear")
         else:
             try:
