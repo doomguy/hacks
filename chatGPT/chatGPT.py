@@ -6,73 +6,92 @@ import sys
 import os
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
+from collections import deque
 
-parser = argparse.ArgumentParser(description="Query ChatGPT using the API")
-parser.add_argument("--key", type=str, help="OpenAI API key")
+# command keywords
+cmds_exit = ["exit", "quit", "q", "logout", "bye"]
+cmds_clear = ["clear", "cls"]
+cmds_help = ["help", "?"]
+# ringbuffer for chat history
+msg_buffer = deque(maxlen=10)
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 kb = KeyBindings()
 
-
+# prompt exit bindings
 @kb.add("c-d")
+@kb.add("c-q")
+@kb.add("escape")
 def exit_(event):
-    """Pressing Ctrl-D will exit the prompt."""
+    """Pressing Ctrl-D, Ctrl-Q or ESC will exit the prompt."""
     sys.exit(1)
 
 
+# ctrl-c binding
 @kb.add("c-c")
 def cancel_(event):
     """Pressing Ctrl-C will do nothing."""
     pass
 
 
-def main(args):
+def show_help():
+    print(
+        f"""\nHelp
+  * Send prompt:\tCtrl+Enter or ESC+Enter
+  * Clear screen:\t{cmds_clear}
+  * Help screen:\t{cmds_help}
+  * Search history:\tCtrl+R
+  * Exit prompt:\tCtrl-D, Ctrl-Q, ESC or {cmds_exit}
+"""
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Query ChatGPT using the API")
+    parser.add_argument("--key", type=str, help="OpenAI API key")
+    args = parser.parse_args()
+
     # check for API key
+    openai.api_key = os.getenv("OPENAI_API_KEY")
     if not openai.api_key and not args.key:
         parser.error("--key or OPENAI_API_KEY environment variable is required.")
     elif not openai.api_key:
         openai.api_key = args.key
-
     # prompt history
     history_file = os.path.join(os.path.expanduser("~"), ".chatgpt_history")
-    # Check if file ~/.chatgpt_history exists. If not, create it.
+    # Check if file ~/.chatgpt_history exists and create if necessary
     if not os.path.exists(history_file):
         with open(history_file.split("/")[-1], "w") as f:
             f.write("")
+            f.close()
 
-    # setup prompt session
+    # prompt session setup
     session = PromptSession(
         history=FileHistory(
             history_file,
         )
     )
 
-    # setup word completer
-    cmds_exit = ["exit", "quit", "q", "logout", "bye"]
-    cmds_clear = ["clear", "cls"]
-    cmds_all = cmds_exit + cmds_clear
-
     # prompt loop
     while True:
-
-        commands = WordCompleter(cmds_all, ignore_case=True)
         prompt = session.prompt(
             "Prompt> ",
             key_bindings=kb,
-            completer=commands,
             auto_suggest=AutoSuggestFromHistory(),
             multiline=True,
         )
         if prompt.strip() == "":
             continue
-        elif prompt.strip().lower() in cmds_exit:
-            sys.exit(1)
+        elif prompt.strip().lower() in cmds_help:
+            show_help()
+            continue
         elif prompt.strip().lower() in cmds_clear:
             os.system("clear")
+            continue
+        elif prompt.strip().lower() in cmds_exit:
+            sys.exit(1)
         else:
             try:
                 query_chatgpt(prompt)
@@ -83,24 +102,15 @@ def main(args):
 
 
 def query_chatgpt(prompt):
-
-    """response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
-        temperature=0.5,
-        max_tokens=500,
-        top_p=1,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-        stream=False,
-    )"""
+    msg_buffer.append({"role": "user", "content": prompt})
+    messages = [{"role": "system", "content": "You are a helpful assistant."}]
+    for msg in msg_buffer:
+        messages.append(msg)
 
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt},
-        ],
+        max_tokens=500,
+        messages=messages,
         frequency_penalty=0.0,  # avoid repeating the same words or phrases, default: 0
         presence_penalty=0.0,  # avoid using words or phrases from prompt or context, default: 0
         stream=False,  # return a continuous stream of responses, default: False
@@ -109,9 +119,9 @@ def query_chatgpt(prompt):
     )
 
     completion = completion.choices[0]["message"]["content"].strip()
+    msg_buffer.append({"role": "assistant", "content": completion})
     print(f"\n{completion}")
 
 
 if __name__ == "__main__":
-    args = parser.parse_args()
-    main(args)
+    main()
