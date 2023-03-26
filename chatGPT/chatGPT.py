@@ -14,7 +14,7 @@ from collections import deque
 cmds_exit = ["exit", "quit", "q", "logout", "bye"]
 cmds_clear = ["clear", "cls"]
 cmds_help = ["help", "?"]
-# ringbuffer for chat history
+# chat history ringbuffer
 msg_buffer = deque(maxlen=10)
 
 
@@ -42,7 +42,7 @@ def show_help():
   * Send prompt:\tCtrl+Enter or ESC+Enter
   * Clear screen:\t{cmds_clear}
   * Help screen:\t{cmds_help}
-  * Search history:\tCtrl+R
+  * Search history:\tCtrl+R (ESC for exit)
   * Exit prompt:\tCtrl-D, Ctrl-Q, ESC or {cmds_exit}
 """
     )
